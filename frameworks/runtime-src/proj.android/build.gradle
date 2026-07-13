@@ -1,0 +1,37 @@
+// 顶级构建文件，您可以在其中添加所有子项目/模块通用的配置选项。
+
+buildscript {
+    ext {
+        agp_version = '7.4.0'
+    }
+    repositories {
+        google()
+        //jcenter()
+        maven {
+            allowInsecureProtocol = true
+            url 'http://maven.aliyun.com/nexus/content/groups/public/'
+        }
+    }
+
+    dependencies {
+        classpath "com.android.tools.build:gradle:$agp_version"
+
+        // NOTE: 不要在此处放置应用程序依赖项；他们属于
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        // jcenter()
+        maven {
+            allowInsecureProtocol = true
+            url 'http://maven.aliyun.com/nexus/content/groups/public/'
+        }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

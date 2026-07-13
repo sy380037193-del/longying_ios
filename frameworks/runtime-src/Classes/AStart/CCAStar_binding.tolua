@@ -1,0 +1,65 @@
+
+$#include "ANodeGrid.h"
+$#include "Binary.h"
+$#include "AStar.h"
+$#include "ANode.h"
+class ANodeGrid : public Ref
+{
+	int top;
+	int bottom;
+	static ANodeGrid *create(int numCols, int numRows);
+	void setSize(int numCols, int numRows);
+	ANode* getNode(int x, int y);
+	void setEndNode(int x, int y);
+	void setStartNode(int x, int y);
+	void setWalkable(int x, int y, bool value);
+	bool hasBarrier(int staratX, int starttY, int endX, int endY);
+	Vector<ANode*> getNodesUnderPoint(float xPos, float yPos, Vector<ANode*> *exception=NULL);
+	ANode *findReplacer(ANode *fromNode, ANode *toNode);
+	void calculateBuriedDepth();
+	ANode* getEndNode();
+	int getNumCols();
+	int getNumRows();
+	ANode* getStartNode();
+};
+
+class Binary:public Ref
+{
+	static Binary *create();
+
+	void push(ANode *node);
+	ANode *shift();
+	void updateNode(ANode *node);
+	int indexOf(ANode *node);
+	int getLength();
+	bool compareTwoNodes(ANode *node1, ANode *node2);
+	const char* toString();
+};
+
+class AStar: public Ref
+{
+	static AStar *create();
+	bool findPath(ANodeGrid *grid);
+	bool search();
+	void floyd();
+	Vector<ANode*> getFloydPath();
+};
+class ANode : public Ref
+{
+	int x;
+	int y;
+	float f;
+	float g;
+	float h;
+	bool walkable;
+	float costMultiplier;
+	float posX;
+	float posY;
+	int buriedDepth;
+	float distance;
+	ANode * getParent();
+	void setParent(ANode* node);
+	static ANode *create(int x, int y);
+	bool posEquals(ANode *otherNode);
+	float getDistanceTo(ANode *targetNode);
+};

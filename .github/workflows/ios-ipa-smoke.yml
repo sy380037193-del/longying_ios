@@ -1,0 +1,37 @@
+name: Longying iOS IPA Smoke
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+          cmake --version
+
+      - name: Build unsigned smoke IPA
+        env:
+          IOS_ALLOW_UNSIGNED: "1"
+        run: |
+          bash ios_ipa_smoke/scripts/ci_build_ipa.sh
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: longying-ios-smoke
+          path: |
+            ios_ipa_smoke/artifacts/*.ipa
+            ios_ipa_smoke/artifacts/*dSYM*.zip
+          if-no-files-found: error

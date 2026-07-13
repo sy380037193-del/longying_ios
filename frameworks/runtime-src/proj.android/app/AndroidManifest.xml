@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.gdoo.dhxy"
+    android:installLocation="auto">
+
+    <uses-feature android:glEsVersion="0x00020000" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <application
+        android:label="@string/app_name"
+		android:allowBackup="true"
+		android:usesCleartextTraffic="true"
+        android:icon="@mipmap/ic_launcher">
+        
+        <!-- Tell Cocos2dxActivity the name of our .so -->
+		<meta-data android:name="android.app.lib_name"
+				   android:value="cocos2dlua" />
+		
+        <activity
+            android:name="org.cocos2dx.lua.AppActivity"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            tools:ignore="DiscouragedApi">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+    <!-- 获取网络权限 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 允许应用改变网络连接状态 -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+    <!--允许应用改变WiFi状态 -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <!--获取网络状态权限-->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!--获取WiFi状态权限-->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <!--手机状态-->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <!--用来设置了内置sd卡的写权限-->
+     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+      <!--它允许我它允许我们使用录音-->
+    <!--<uses-permission android:name="android.permission.RECORD_AUDIO"/>-->
+
+     <!-- 特权级别的操作用于允许挂载和卸载文件系统的权限-->
+    <!-- <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"
+         tools:ignore="ProtectedPermissions" />-->
+     <!-- 应用能够读取用户设备上的图片、视频、文档等文件-->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <!-- 这个权限允许程序重新启动其他程序-->
+    <!-- <uses-permission android:name="android.permission.RESTART_PACKAGES"/>-->
+     <!-- 这个权限主要用于获取系统中任务（Task）的相关信息-->
+    <!--  <uses-permission android:name="android.permission.GET_TASKS"/>-->
+      <!-- 在设备休眠状态下仍能接收并显示实时通知-->
+   <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!--权限允许应用访问设备的网络定位服务，以获取设备所在的大致位置信息-->
+    <!-- <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>-->
+      <!-- 它允许应用程序在所有用户之间进行交互。这包括在其他用户的应用程序中创建活动、发送广播和执行其他操作-->
+      <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL"
+        tools:ignore="ProtectedPermissions" /> 
+    <!--摄像头（相机） -->
+    <!-- <uses-permission android:name="android.permission.CAMERA"/> -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <!--权限‌允许应用访问用户的电话号码信息 -->
+    <!-- <uses-permission android:name="android.permission.READ_PHONE_NUMBERS"/> -->
+    <!--使用振动权限 -->
+    <!--<uses-permission android:name="android.permission.VIBRATE"/>-->
+
+</manifest>

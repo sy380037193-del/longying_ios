@@ -1,0 +1,36 @@
+# Generated resources and build outputs
+/resources/
+/outres/
+/outres_pngquant/
+/outres*.zip
+/build_ios/
+/ios_ipa_smoke/artifacts/
+
+# Android and native generated output
+**/.gradle/
+**/.cxx/
+**/build/
+/frameworks/runtime-src/proj.android/app/assets/
+/frameworks/runtime-src/proj.android/release/
+**/local.properties
+**/output-metadata.json
+*.apk
+*.ipa
+*.dSYM.zip
+*.pdb
+
+# Tool caches
+**/__pycache__/
+*.pyc
+/tools_new/.enc_cache/
+/tools_new/000luabytecode.tmp
+/tools_new/collision_log.txt
+
+# Local runtime/debug files not needed by CI
+/tools_new/runner/
+/tools_new/win32/player.exe
+
+# IDE/system files
+**/.idea/
+*.xcuserdatad/
+._*

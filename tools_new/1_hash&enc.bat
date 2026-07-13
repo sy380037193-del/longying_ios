@@ -1,0 +1,1 @@
+py -3 .\hash_encrypt.py

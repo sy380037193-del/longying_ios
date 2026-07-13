@@ -1,0 +1,17 @@
+{
+  "EngineVersion": "8.8.8",
+  "GameVersion": "26.07.132024",
+  "packages": [
+    "game"
+  ],
+  "asserts": {
+    "7/ca098768f5c57a5f.lua": [
+      "8deef561ae2800a20ea285bf0466349d",
+      641
+    ],
+    "f/d849b47a4c5a6ffa.json": [
+      "6dbe847bce89c3a143176a581cd07442",
+      97
+    ]
+  }
+}
