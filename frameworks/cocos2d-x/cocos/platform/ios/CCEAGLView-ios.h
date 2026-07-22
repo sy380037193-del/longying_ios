@@ -76,6 +76,14 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
  */
 @interface CCEAGLView : UIView
 {
+    EAGLContext             *context_;
+    NSString                *pixelformat_;
+    GLuint                  depthFormat_;
+    BOOL                    multiSampling_;
+    CGSize                  size_;
+    GLuint                  defaultFramebuffer_;
+    GLuint                  colorRenderbuffer_;
+    GLuint                  depthRenderbuffer_;
     BOOL                    preserveBackbuffer_;
     CGRect                  safeArea_;
     BOOL                    discardFramebufferSupported_;

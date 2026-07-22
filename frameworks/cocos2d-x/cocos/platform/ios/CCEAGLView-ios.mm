@@ -63,13 +63,10 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
 #import "platform/ios/CCEAGLView-ios.h"
 
 #import <QuartzCore/QuartzCore.h>
-#import <Metal/Metal.h>
 
 #import "base/CCDirector.h"
 #import "base/CCTouch.h"
 #import "base/CCIMEDispatcher.h"
-#import "renderer/backend/metal/DeviceMTL.h"
-#import "renderer/backend/metal/Utils.h"
 #import "platform/ios/CCInputView-ios.h"
 
 //CLASS IMPLEMENTATIONS:
@@ -77,6 +74,8 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
 #define IOS_MAX_TOUCHES_COUNT     10
 
 @interface CCEAGLView ()
+- (BOOL)setupSurfaceWithSharegroup:(EAGLSharegroup*)sharegroup;
+- (BOOL)resizeDrawable;
 @property (nonatomic) CCInputView* textInputView;
 @property(nonatomic, readwrite, assign) BOOL isKeyboardShown;
 @property(nonatomic, copy) NSNotification* keyboardShowNotification;
@@ -94,7 +93,7 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
 
 + (Class) layerClass
 {
-    return [CAMetalLayer class];
+    return [CAEAGLLayer class];
 }
 
 + (id) viewWithFrame:(CGRect)frame
@@ -132,7 +131,11 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
     if((self = [super initWithFrame:frame]))
     {
         self.textInputView = [[CCInputView alloc] initWithFrame:frame];
-
+        pixelformat_ = [format copy];
+        depthFormat_ = depth;
+        multiSampling_ = sampling;
+        requestedSamples_ = nSamples;
+        preserveBackbuffer_ = retained;
         originalRect_ = self.frame;
         self.keyboardShowNotification = nil;
         if ([self respondsToSelector:@selector(setContentScaleFactor:)])
@@ -140,17 +143,11 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
             self.contentScaleFactor = [[UIScreen mainScreen] scale];
         }
 
-        id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-        if (!device)
+        if (![self setupSurfaceWithSharegroup:sharegroup])
         {
-             CCLOG("Doesn't support metal.");
-             return nil;
+            [self release];
+            return nil;
         }
-        CAMetalLayer* metalLayer = (CAMetalLayer*)[self layer];
-        metalLayer.device = device;
-        metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-        metalLayer.framebufferOnly = YES;
-        cocos2d::backend::DeviceMTL::setCAMetalLayer(metalLayer);
     }
     
     return self;
@@ -160,11 +157,79 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
 {
     if ( (self = [super initWithCoder:aDecoder]) )
     {
-        size_ = [self bounds].size;
         self.textInputView = [[CCInputView alloc] initWithCoder:aDecoder];
+        pixelformat_ = [kEAGLColorFormatRGBA8 copy];
+        depthFormat_ = GL_DEPTH_COMPONENT16;
+        multiSampling_ = NO;
+        requestedSamples_ = 0;
+        preserveBackbuffer_ = NO;
+        if (![self setupSurfaceWithSharegroup:nil])
+        {
+            [self release];
+            return nil;
+        }
     }
     
     return self;
+}
+
+- (BOOL)setupSurfaceWithSharegroup:(EAGLSharegroup*)sharegroup
+{
+    CAEAGLLayer *eaglLayer = (CAEAGLLayer*)self.layer;
+    eaglLayer.opaque = YES;
+    eaglLayer.drawableProperties = @{
+        kEAGLDrawablePropertyRetainedBacking: @(preserveBackbuffer_),
+        kEAGLDrawablePropertyColorFormat: pixelformat_
+    };
+
+    context_ = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2
+                                     sharegroup:sharegroup];
+    if (!context_ || ![EAGLContext setCurrentContext:context_])
+        return NO;
+
+    glGenFramebuffers(1, &defaultFramebuffer_);
+    glGenRenderbuffers(1, &colorRenderbuffer_);
+    return [self resizeDrawable];
+}
+
+- (BOOL)resizeDrawable
+{
+    if (![EAGLContext setCurrentContext:context_])
+        return NO;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebuffer_);
+    glBindRenderbuffer(GL_RENDERBUFFER, colorRenderbuffer_);
+    if (![context_ renderbufferStorage:GL_RENDERBUFFER fromDrawable:(CAEAGLLayer*)self.layer])
+        return NO;
+
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                              GL_RENDERBUFFER, colorRenderbuffer_);
+
+    GLint width = 0;
+    GLint height = 0;
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &width);
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &height);
+    size_ = CGSizeMake(width, height);
+
+    if (depthRenderbuffer_)
+        glDeleteRenderbuffers(1, &depthRenderbuffer_);
+
+    if (depthFormat_)
+    {
+        glGenRenderbuffers(1, &depthRenderbuffer_);
+        glBindRenderbuffer(GL_RENDERBUFFER, depthRenderbuffer_);
+        glRenderbufferStorage(GL_RENDERBUFFER, depthFormat_, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                  GL_RENDERBUFFER, depthRenderbuffer_);
+        if (depthFormat_ == GL_DEPTH24_STENCIL8_OES)
+        {
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+                                      GL_RENDERBUFFER, depthRenderbuffer_);
+        }
+    }
+
+    glBindRenderbuffer(GL_RENDERBUFFER, colorRenderbuffer_);
+    return glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
 }
 
 
@@ -183,6 +248,17 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
 - (void) dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self]; // remove keyboard notification
+    [EAGLContext setCurrentContext:context_];
+    if (depthRenderbuffer_)
+        glDeleteRenderbuffers(1, &depthRenderbuffer_);
+    if (colorRenderbuffer_)
+        glDeleteRenderbuffers(1, &colorRenderbuffer_);
+    if (defaultFramebuffer_)
+        glDeleteFramebuffers(1, &defaultFramebuffer_);
+    if ([EAGLContext currentContext] == context_)
+        [EAGLContext setCurrentContext:nil];
+    [context_ release];
+    [pixelformat_ release];
     [self.textInputView release];
     [super dealloc];
 }
@@ -192,11 +268,8 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
     if (!cocos2d::Director::getInstance()->isValid())
         return;
 
-    size_ = [self bounds].size;
-    size_.width *= self.contentScaleFactor;
-    size_.height *= self.contentScaleFactor;
-
-	cocos2d::backend::Utils::resizeDefaultAttachmentTexture(size_.width, size_.height);
+    if (![self resizeDrawable])
+        return;
 
     // Avoid flicker. Issue #350
     if ([NSThread isMainThread])
@@ -207,6 +280,10 @@ Copyright (C) 2008 Apple Inc. All Rights Reserved.
 
 - (void) swapBuffers
 {
+    [EAGLContext setCurrentContext:context_];
+    glBindRenderbuffer(GL_RENDERBUFFER, colorRenderbuffer_);
+    [context_ presentRenderbuffer:GL_RENDERBUFFER];
+    glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebuffer_);
 }
 
 #pragma mark CCEAGLView - Point conversion

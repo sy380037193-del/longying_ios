@@ -54,3 +54,15 @@ step or replace `ios_ipa_smoke/outres_smoke` with the full encrypted package.
 Do not commit local Android build caches, APKs, IPAs, `build_ios`, full
 `resources`, generated `outres`, or generated ZIP packages into this skeleton
 repository.
+
+## iOS Renderer A/B Build
+
+The iOS skeleton currently builds the Cocos OpenGL ES 2 backend instead of the
+Metal backend. This keeps the Lua and `outres` inputs unchanged while using the
+same renderer family as the working Android build. The iOS view owns a
+`CAEAGLLayer`, an `EAGLContext`, and the default color/depth framebuffer.
+
+This is a controlled A/B build for the outfit skinning issue. Treat it as the
+long-term renderer setting only after a real-device test confirms that the
+face, legs, and outfit render correctly. If the issue remains, revert this
+renderer switch and continue diagnosis outside the resource package.
