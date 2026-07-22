@@ -90,3 +90,23 @@
 - `docs/ios_ipa_smoke_build.md`: documented the permanent ARM64 Release math fix and its IPA rebuild boundary.
 - `progress.md`: appended this task record without rewriting prior history.
 - Rollback: revert this task commit, then push `main` to rebuild the preceding diagnostic package.
+
+## 2026-07-23 - Task: Hide iOS closed-eye meshes by default
+### What was done
+- Confirmed the persistent face artifact is the head model's closed-eye overlay rather than a dress texture, normal face, or Metal skinning deformation.
+- Made Sprite3D hide meshes bound to `bone_biyan` when model data is created; Lua can still show the mesh briefly for the blink animation.
+- Applied the same default to normal and attached Sprite3D creation so first loads and cache-backed loads behave consistently.
+- Removed the unrelated ARM64 NEON optimization experiment after the device result disproved it.
+- Documented the native default and its IPA rebuild boundary.
+### Testing
+- Parsed `2034.c3b` and rendered `shape4_part1` offline: its two raised eye strips match the persistent artifact in the device screenshots; it contains 36 vertices and 50 triangles.
+- Parsed all 270 shape C3B files: 28 meshes use `bone_biyan`, and every match is a dedicated mesh bound only to that bone.
+- Verified `2034/2034.c3b` maps `shape4_part1` exclusively to `bone_biyan`; the normal face maps to `Bip01 Head` and `Bip01 Neck`.
+- Verified `MathUtilNeon64.inl` has no difference from the initial iOS skeleton revision.
+- Ran `git diff --check` successfully. GitHub Actions Release compilation and one final device installation remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCSprite3D.cpp`: defaults meshes controlled by `bone_biyan` to hidden in both Sprite3D model creation paths.
+- `frameworks/cocos2d-x/cocos/math/MathUtilNeon64.inl`: removes the disproved `optnone` experiment and restores the initial skeleton implementation.
+- `docs/ios_ipa_smoke_build.md`: replaces the obsolete NEON explanation with the closed-eye mesh behavior and rebuild requirement.
+- `progress.md`: appends the evidence, verification boundary, changed-file list, and rollback point for this task.
+- Rollback: revert this task commit, then push `main` to rebuild the prior IPA skeleton.

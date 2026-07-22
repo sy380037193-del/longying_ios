@@ -55,14 +55,14 @@ Do not commit local Android build caches, APKs, IPAs, `build_ios`, full
 `resources`, generated `outres`, or generated ZIP packages into this skeleton
 repository.
 
-## iOS ARM64 Release Math Fix
+## iOS Closed-Eye Mesh Default
 
-The iOS skeleton uses the original Metal backend and unmodified game resources.
-Its Release build applies the upstream Cocos fix from commit `95319e9100` to
-the ARM64 NEON math helpers. These old inline assembly functions must not be
-optimized by modern Apple clang; otherwise matrix operations used to build the
-3D skinning palette can produce corrupted outfit geometry.
+The head models contain a separate skinned mesh for the closed-eye animation.
+That mesh is bound to the `bone_biyan` bone and must start hidden; Lua may show
+it briefly while playing the blink animation.
 
-The fix is native code in the IPA and is independent of Lua, C3B, textures,
-`outres`, and later hot updates. Rebuilding the IPA is required when changing
-this fix; replacing only `outres` cannot update it.
+The iOS skeleton now hides every mesh bound to `bone_biyan` when Sprite3D data
+is created, including the cache-loading path. This native default prevents the
+closed-eye overlay from covering the normal face when Lua does not resolve the
+mesh, while preserving later `Mesh:setVisible` blink control. Rebuilding the
+IPA is required; replacing only `outres` cannot update this behavior.
