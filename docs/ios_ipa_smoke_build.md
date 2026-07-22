@@ -55,31 +55,14 @@ Do not commit local Android build caches, APKs, IPAs, `build_ios`, full
 `resources`, generated `outres`, or generated ZIP packages into this skeleton
 repository.
 
-## iOS Metal Skinning Diagnostic Build
+## iOS ARM64 Release Math Fix
 
-The iOS skeleton uses the original Metal backend. The current diagnostic build
-changes only the native skinned-mesh draw path and keeps Lua, C3B, textures, and
-`outres` unchanged.
+The iOS skeleton uses the original Metal backend and unmodified game resources.
+Its Release build applies the upstream Cocos fix from commit `95319e9100` to
+the ARM64 NEON math helpers. These old inline assembly functions must not be
+optimized by modern Apple clang; otherwise matrix operations used to build the
+3D skinning palette can produce corrupted outfit geometry.
 
-Open the outfit screen with shape `2034` and dress `nuandong` (`serial = 34`),
-then record at least 16 seconds. Skinned meshes rotate through these modes every
-four seconds:
-
-- Normal color: original Metal GPU skinning.
-- Red tint: original bind-pose vertices with GPU skinning bypassed.
-- Green tint: CPU-skinned vertices with GPU skinning bypassed.
-- Magenta tint: the CPU diagnostic rejected an unexpected vertex layout or
-  invalid palette input; report this frame instead of interpreting it as CPU
-  output.
-
-Interpret one complete cycle as follows:
-
-- Red is already geometrically wrong: inspect Metal vertex layout and pipeline
-  state reuse.
-- Red is coherent but green is wrong: inspect bone palette calculation and
-  per-part skeleton assembly.
-- Green is coherent but normal color is wrong: inspect Metal uniform upload,
-  shader translation, and pipeline state.
-
-This instrumentation is temporary. Remove it after the real-device result
-identifies the failing layer, then apply the final fix only in that layer.
+The fix is native code in the IPA and is independent of Lua, C3B, textures,
+`outres`, and later hot updates. Rebuilding the IPA is required when changing
+this fix; replacing only `outres` cannot update it.

@@ -39,47 +39,12 @@
 #include "renderer/CCPass.h"
 #include "renderer/CCRenderer.h"
 #include "renderer/backend/Buffer.h"
-#include "renderer/backend/Device.h"
 #include "renderer/backend/Program.h"
 #include "math/Mat4.h"
-
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-#include <chrono>
-#include <cmath>
-#endif
 
 using namespace std;
 
 NS_CC_BEGIN
-
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-namespace
-{
-enum class IosSkinningDiagnosticMode
-{
-    METAL_GPU = 0,
-    BIND_POSE = 1,
-    CPU_SKINNING = 2
-};
-
-IosSkinningDiagnosticMode getIosSkinningDiagnosticMode()
-{
-    static const auto startedAt = std::chrono::steady_clock::now();
-    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - startedAt).count();
-    return static_cast<IosSkinningDiagnosticMode>((elapsed / 4000) % 3);
-}
-
-Vec4 getIosSkinningDiagnosticColor(const Vec4& color, IosSkinningDiagnosticMode mode)
-{
-    if (mode == IosSkinningDiagnosticMode::BIND_POSE)
-        return Vec4(color.x, color.y * 0.35f, color.z * 0.35f, color.w);
-    if (mode == IosSkinningDiagnosticMode::CPU_SKINNING)
-        return Vec4(color.x * 0.35f, color.y, color.z * 0.35f, color.w);
-    return color;
-}
-}
-#endif
 
 // Helpers
 
@@ -167,152 +132,7 @@ Mesh::~Mesh()
     CC_SAFE_RELEASE(_skin);
     CC_SAFE_RELEASE(_meshIndexData);
     CC_SAFE_RELEASE(_material);
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-    CC_SAFE_RELEASE(_iosSkinningDiagnosticBuffer);
-#endif
 }
-
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-backend::Buffer* Mesh::updateIosSkinningDiagnosticBuffer(const Vec4* matrixPalette, ssize_t matrixPaletteRows)
-{
-    const auto* vertexData = _meshIndexData->getMeshVertexData();
-    const auto& source = vertexData->_vertexData;
-    const auto stride = vertexData->getSizePerVertex();
-    if (!matrixPalette || matrixPaletteRows <= 0 || source.empty() || stride <= 0)
-        return nullptr;
-
-    int positionOffset = -1;
-    int normalOffset = -1;
-    int tangentOffset = -1;
-    int binormalOffset = -1;
-    int blendWeightOffset = -1;
-    int blendIndexOffset = -1;
-    backend::VertexFormat positionFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat normalFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat tangentFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat binormalFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat blendWeightFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat blendIndexFormat = backend::VertexFormat::FLOAT;
-
-    int offset = 0;
-    for (const auto& attribute : vertexData->_attribs)
-    {
-        switch (attribute.vertexAttrib)
-        {
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_POSITION:
-                positionOffset = offset;
-                positionFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_NORMAL:
-                normalOffset = offset;
-                normalFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_TANGENT:
-                tangentOffset = offset;
-                tangentFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_BINORMAL:
-                binormalOffset = offset;
-                binormalFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_BLEND_WEIGHT:
-                blendWeightOffset = offset;
-                blendWeightFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_BLEND_INDEX:
-                blendIndexOffset = offset;
-                blendIndexFormat = attribute.type;
-                break;
-            default:
-                break;
-        }
-        offset += attribute.getAttribSizeBytes();
-    }
-
-    if (offset != stride || positionOffset < 0 || blendWeightOffset < 0 || blendIndexOffset < 0 ||
-        positionFormat != backend::VertexFormat::FLOAT3 ||
-        blendWeightFormat != backend::VertexFormat::FLOAT4 ||
-        blendIndexFormat != backend::VertexFormat::FLOAT4 ||
-        (normalOffset >= 0 && normalFormat != backend::VertexFormat::FLOAT3) ||
-        (tangentOffset >= 0 && tangentFormat != backend::VertexFormat::FLOAT3) ||
-        (binormalOffset >= 0 && binormalFormat != backend::VertexFormat::FLOAT3))
-    {
-        return nullptr;
-    }
-
-    const auto dataSize = source.size() * sizeof(source[0]);
-    if (dataSize % stride != 0)
-        return nullptr;
-
-    _iosSkinningDiagnosticVertices = source;
-    auto* bytes = reinterpret_cast<unsigned char*>(_iosSkinningDiagnosticVertices.data());
-    const auto vertexCount = dataSize / stride;
-    for (size_t vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex)
-    {
-        auto* vertex = bytes + vertexIndex * stride;
-        auto* position = reinterpret_cast<float*>(vertex + positionOffset);
-        const auto* weights = reinterpret_cast<const float*>(vertex + blendWeightOffset);
-        const auto* indices = reinterpret_cast<const float*>(vertex + blendIndexOffset);
-
-        Vec4 rows[3] = {Vec4::ZERO, Vec4::ZERO, Vec4::ZERO};
-        for (int influence = 0; influence < 4; ++influence)
-        {
-            const float weight = weights[influence];
-            if (influence > 0 && weight <= 0.0f)
-                break;
-            if (!std::isfinite(weight) || !std::isfinite(indices[influence]))
-                return nullptr;
-
-            const int boneIndex = static_cast<int>(indices[influence]);
-            const int paletteOffset = boneIndex * 3;
-            if (boneIndex < 0 || paletteOffset + 2 >= matrixPaletteRows)
-                return nullptr;
-
-            for (int row = 0; row < 3; ++row)
-            {
-                const auto& paletteRow = matrixPalette[paletteOffset + row];
-                rows[row].x += paletteRow.x * weight;
-                rows[row].y += paletteRow.y * weight;
-                rows[row].z += paletteRow.z * weight;
-                rows[row].w += paletteRow.w * weight;
-            }
-        }
-
-        const float positionX = position[0];
-        const float positionY = position[1];
-        const float positionZ = position[2];
-        position[0] = positionX * rows[0].x + positionY * rows[0].y + positionZ * rows[0].z + rows[0].w;
-        position[1] = positionX * rows[1].x + positionY * rows[1].y + positionZ * rows[1].z + rows[1].w;
-        position[2] = positionX * rows[2].x + positionY * rows[2].y + positionZ * rows[2].z + rows[2].w;
-
-        const int directionOffsets[] = {normalOffset, tangentOffset, binormalOffset};
-        for (const int directionOffset : directionOffsets)
-        {
-            if (directionOffset < 0)
-                continue;
-            auto* direction = reinterpret_cast<float*>(vertex + directionOffset);
-            const float directionX = direction[0];
-            const float directionY = direction[1];
-            const float directionZ = direction[2];
-            direction[0] = directionX * rows[0].x + directionY * rows[0].y + directionZ * rows[0].z;
-            direction[1] = directionX * rows[1].x + directionY * rows[1].y + directionZ * rows[1].z;
-            direction[2] = directionX * rows[2].x + directionY * rows[2].y + directionZ * rows[2].z;
-        }
-    }
-
-    if (!_iosSkinningDiagnosticBuffer || _iosSkinningDiagnosticBuffer->getSize() != dataSize)
-    {
-        CC_SAFE_RELEASE(_iosSkinningDiagnosticBuffer);
-        _iosSkinningDiagnosticBuffer = backend::Device::getInstance()->newBuffer(
-            dataSize, backend::BufferType::VERTEX, backend::BufferUsage::DYNAMIC);
-    }
-    if (!_iosSkinningDiagnosticBuffer)
-        return nullptr;
-
-    _iosSkinningDiagnosticBuffer->updateData(_iosSkinningDiagnosticVertices.data(), dataSize);
-    return _iosSkinningDiagnosticBuffer;
-}
-#endif
 
 backend::Buffer* Mesh::getVertexBuffer() const
 {
@@ -582,51 +402,16 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
 
     _material->getStateBlock().setBlend(_force2DQueue || isTransparent);
 
-    backend::Buffer* vertexBuffer = getVertexBuffer();
-    Vec4 uniformColor = color;
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-    Vec4* matrixPalette = nullptr;
-    ssize_t matrixPaletteRows = 0;
-    float bypassGpuSkinning = 0.0f;
-    if (_skin)
-    {
-        matrixPalette = _skin->getMatrixPalette();
-        matrixPaletteRows = _skin->getMatrixPaletteSize();
-        const auto diagnosticMode = getIosSkinningDiagnosticMode();
-        uniformColor = getIosSkinningDiagnosticColor(color, diagnosticMode);
-        if (diagnosticMode != IosSkinningDiagnosticMode::METAL_GPU)
-            bypassGpuSkinning = 1.0f;
-        if (diagnosticMode == IosSkinningDiagnosticMode::CPU_SKINNING)
-        {
-            auto* cpuSkinnedBuffer = updateIosSkinningDiagnosticBuffer(matrixPalette, matrixPaletteRows);
-            if (cpuSkinnedBuffer)
-                vertexBuffer = cpuSkinnedBuffer;
-            else
-                uniformColor = Vec4(color.x, color.y * 0.2f, color.z, color.w);
-        }
-    }
-#endif
-
     // set default uniforms for Mesh
     // 'u_color' and others
     const auto scene = Director::getInstance()->getRunningScene();
     auto technique = _material->_currentTechnique;
     for(const auto pass : technique->_passes)
     {
-        pass->setUniformColor(&uniformColor, sizeof(uniformColor));
+        pass->setUniformColor(&color, sizeof(color));
 
         if (_skin)
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-        {
-            pass->setUniformMatrixPalette(matrixPalette, matrixPaletteRows * sizeof(matrixPalette[0]));
-            auto* programState = pass->getProgramState();
-            auto diagnosticLocation = programState->getUniformLocation("u_skinningDiagnosticBypass");
-            if (diagnosticLocation)
-                programState->setUniform(diagnosticLocation, &bypassGpuSkinning, sizeof(bypassGpuSkinning));
-        }
-#else
             pass->setUniformMatrixPalette(_skin->getMatrixPalette(), _skin->getMatrixPaletteSizeInBytes());
-#endif
 
         if (scene && scene->getLights().size() > 0)
         {
@@ -644,7 +429,7 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
     }
 
     _material->draw(commands.data(), globalZ,
-                    vertexBuffer,
+                    getVertexBuffer(),
                     getIndexBuffer(),
                     getPrimitiveType(),
                     getIndexFormat(),

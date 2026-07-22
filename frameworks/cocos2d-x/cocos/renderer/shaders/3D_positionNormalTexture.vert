@@ -177,9 +177,6 @@ attribute vec3 a_binormal;
 const int SKINNING_JOINT_COUNT = 60;
 // Uniforms
 uniform vec4 u_matrixPalette[SKINNING_JOINT_COUNT * 3];
-#ifdef CC_IOS_SKINNING_DIAGNOSTIC
-uniform float u_skinningDiagnosticBypass;
-#endif
 
 uniform mat4 u_MVMatrix;
 uniform mat3 u_NormalMatrix;
@@ -211,18 +208,6 @@ varying vec3 v_normal;
 
 void getPositionAndNormal(out vec4 position, out vec3 normal, out vec3 tangent, out vec3 binormal)
 {
-#ifdef CC_IOS_SKINNING_DIAGNOSTIC
-    if (u_skinningDiagnosticBypass > 0.5)
-    {
-        position = vec4(a_position, 1.0);
-        normal = a_normal;
-#ifdef USE_NORMAL_MAPPING
-        tangent = a_tangent;
-        binormal = a_binormal;
-#endif
-        return;
-    }
-#endif
     float blendWeight = a_blendWeight[0];
 
     int matrixIndex = int (a_blendIndex[0]) * 3;

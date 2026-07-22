@@ -66,3 +66,27 @@
 - `docs/ios_ipa_smoke_build.md`: documents recording steps, color states, and the result decision table.
 - `progress.md`: records this diagnostic task, validation boundary, and rollback.
 - Rollback: run `git revert HEAD` from `D:\haizi\longying_ios`, then push `main` to rebuild the preceding GLES A/B package.
+
+## 2026-07-22 - Task: Fix iOS ARM64 Release matrix corruption
+### What was done
+- Removed the temporary Metal skinning diagnostic and restored the original Metal mesh, shader, and program-state paths.
+- Confirmed the working Android reference APK is an ARM64 Debug build compiled with `-O0`, while GitHub Actions builds the iOS IPA as Release.
+- Applied the upstream Cocos ARM64 NEON non-optimization fix so modern Apple clang cannot corrupt matrix operations used by the skinning palette.
+- Replaced the temporary diagnostic instructions with the permanent native-build fix description.
+### Testing
+- Verified the seven restored diagnostic source files match the initial iOS skeleton object hashes.
+- Verified all ten ARM64 NEON assembly helpers carry the upstream `optnone` attribute.
+- Verified the source change matches the NEON64 half of upstream Cocos commit `95319e9100`.
+- GitHub Actions Release compilation and IPA artifact validation are required after this change is pushed.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: restored the original mesh draw path and removed temporary CPU skinning modes.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.h`: removed temporary CPU skinning state.
+- `frameworks/cocos2d-x/cocos/3d/CCMeshVertexIndexData.cpp`: removed temporary retained Metal vertex bytes.
+- `frameworks/cocos2d-x/cocos/math/MathUtilNeon64.inl`: disabled compiler optimization for the ARM64 NEON assembly helpers using the upstream fix.
+- `frameworks/cocos2d-x/cocos/renderer/CMakeLists.txt`: restored the original renderer source list.
+- `frameworks/cocos2d-x/cocos/renderer/backend/ProgramCache.cpp`: removed the temporary diagnostic shader define.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionNormalTexture.vert`: restored the original lit skinning shader.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionTexture.vert`: restored the original unlit skinning shader.
+- `docs/ios_ipa_smoke_build.md`: documented the permanent ARM64 Release math fix and its IPA rebuild boundary.
+- `progress.md`: appended this task record without rewriting prior history.
+- Rollback: revert this task commit, then push `main` to rebuild the preceding diagnostic package.
