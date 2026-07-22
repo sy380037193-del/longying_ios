@@ -55,14 +55,31 @@ Do not commit local Android build caches, APKs, IPAs, `build_ios`, full
 `resources`, generated `outres`, or generated ZIP packages into this skeleton
 repository.
 
-## iOS Renderer A/B Build
+## iOS Metal Skinning Diagnostic Build
 
-The iOS skeleton currently builds the Cocos OpenGL ES 2 backend instead of the
-Metal backend. This keeps the Lua and `outres` inputs unchanged while using the
-same renderer family as the working Android build. The iOS view owns a
-`CAEAGLLayer`, an `EAGLContext`, and the default color/depth framebuffer.
+The iOS skeleton uses the original Metal backend. The current diagnostic build
+changes only the native skinned-mesh draw path and keeps Lua, C3B, textures, and
+`outres` unchanged.
 
-This is a controlled A/B build for the outfit skinning issue. Treat it as the
-long-term renderer setting only after a real-device test confirms that the
-face, legs, and outfit render correctly. If the issue remains, revert this
-renderer switch and continue diagnosis outside the resource package.
+Open the outfit screen with shape `2034` and dress `nuandong` (`serial = 34`),
+then record at least 16 seconds. Skinned meshes rotate through these modes every
+four seconds:
+
+- Normal color: original Metal GPU skinning.
+- Red tint: original bind-pose vertices with GPU skinning bypassed.
+- Green tint: CPU-skinned vertices with GPU skinning bypassed.
+- Magenta tint: the CPU diagnostic rejected an unexpected vertex layout or
+  invalid palette input; report this frame instead of interpreting it as CPU
+  output.
+
+Interpret one complete cycle as follows:
+
+- Red is already geometrically wrong: inspect Metal vertex layout and pipeline
+  state reuse.
+- Red is coherent but green is wrong: inspect bone palette calculation and
+  per-part skeleton assembly.
+- Green is coherent but normal color is wrong: inspect Metal uniform upload,
+  shader translation, and pipeline state.
+
+This instrumentation is temporary. Remove it after the real-device result
+identifies the failing layer, then apply the final fix only in that layer.

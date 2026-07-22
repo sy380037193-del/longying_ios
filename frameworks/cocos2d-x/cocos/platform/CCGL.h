@@ -32,23 +32,6 @@ THE SOFTWARE.
 
 #if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
 #include "platform/android/CCGL-android.h"
-#elif CC_TARGET_PLATFORM == CC_PLATFORM_IOS
-#define glClearDepth                glClearDepthf
-#define glDeleteVertexArrays        glDeleteVertexArraysOES
-#define glGenVertexArrays           glGenVertexArraysOES
-#define glBindVertexArray           glBindVertexArrayOES
-#define glMapBuffer                 glMapBufferOES
-#define glUnmapBuffer               glUnmapBufferOES
-
-#define GL_DEPTH24_STENCIL8         GL_DEPTH24_STENCIL8_OES
-#define GL_WRITE_ONLY               GL_WRITE_ONLY_OES
-
-#include <OpenGLES/ES2/gl.h>
-#include <OpenGLES/ES2/glext.h>
-
-#ifndef GL_BGRA
-#define GL_BGRA 0x80E1
-#endif
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_WIN32
 #include "platform/win32/CCGL-win32.h"
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_LINUX
