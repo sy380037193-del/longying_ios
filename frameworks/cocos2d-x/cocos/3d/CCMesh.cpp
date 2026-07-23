@@ -417,7 +417,7 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
 
     if (iosDiffuseTexture)
     {
-        for (const auto* pass : _material->_currentTechnique->_passes)
+        for (auto* pass : _material->_currentTechnique->_passes)
             pass->setUniformTexture(0, iosDiffuseTexture->getBackendTexture());
     }
 

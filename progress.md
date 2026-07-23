@@ -253,3 +253,16 @@
 - `docs/ios_ipa_smoke_build.md`: documents the iOS-only atlas and final-binding behavior.
 - `progress.md`: appends the phone evidence, implementation, verification boundary, changed-file list, and rollback command.
 - Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the V2 evidence-only package.
+
+## 2026-07-23 - Task: Fix iOS V3 package compilation
+### What was done
+- Corrected the iOS final texture-binding loop to keep each material pass mutable when calling its texture setter.
+- Kept the V3 atlas-coordinate and final texture-binding behavior unchanged.
+### Testing
+- Confirmed the failed Xcode build stopped only because `setUniformTexture` was called through a `const Pass` pointer at `CCMesh.cpp:421`.
+- Ran `git diff --check` successfully after the edit.
+- GitHub Actions compilation and IPA generation remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: changes the local pass pointer from const to mutable so the existing non-const setter compiles.
+- `progress.md`: appends this compile-fix record and verification boundary.
+- Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the compile-failing V3 source.
