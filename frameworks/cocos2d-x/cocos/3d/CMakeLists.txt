@@ -2,6 +2,7 @@ set(COCOS_3D_HEADER
 
     3d/CCBillBoard.h
     3d/CCFrustum.h
+    3d/CCIOSHeadRenderDiagnostics.h
     3d/CCSprite3DMaterial.h
     3d/CCMeshVertexIndexData.h
     3d/CCPlane.h
@@ -39,6 +40,7 @@ set(COCOS_3D_SRC
     3d/CCBundle3DData.cpp
     3d/CCBundleReader.cpp
     3d/CCFrustum.cpp
+    3d/CCIOSHeadRenderDiagnostics.cpp
     3d/CCMesh.cpp
     3d/CCMeshSkin.cpp
     3d/CCMeshVertexIndexData.cpp

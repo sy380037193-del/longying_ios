@@ -55,22 +55,40 @@ Do not commit local Android build caches, APKs, IPAs, `build_ios`, full
 `resources`, generated `outres`, or generated ZIP packages into this skeleton
 repository.
 
-## iOS Metal CPU Skinning Compatibility
+## Temporary iOS Head Render Diagnostics
 
-The iOS Metal build uses CPU skinning for built-in skinned Sprite3D materials
-and lets the vertex shader consume the resulting positions and normals
-directly. This bypasses the Metal GPU skinning path that deforms outfit face
-and leg meshes incorrectly, while Android and non-Metal builds keep their
-original rendering path.
+The iOS package currently contains a temporary diagnostic channel for the
+outfit face-rendering investigation. It does not change Lua, C3B files,
+textures, `outres`, `version.json`, or the Android rendering path. The failed
+iOS CPU-skinning experiment has been removed.
 
-C3B files can share one vertex buffer between several submeshes, but each
-submesh has its own local bone palette. The compatibility path therefore
-retains the source vertices and indices on iOS and transforms only vertices
-referenced by the current submesh. It falls back to the original GPU path when
-a custom shader does not expose the CPU-skinning switch or when source data
-does not pass validation.
+Before launching the diagnostic IPA, start the receiver from the repository
+root on the development computer:
 
-The implementation does not alter Lua, C3B files, textures, `outres`, or
-`version.json`. A rebuilt IPA can be checked for the string
-`u_iosCpuSkinning` before installation to confirm that this native path is in
-the packaged executable.
+```powershell
+python tools_new/receive_ios_head_log.py
+```
+
+The receiver listens on `0.0.0.0:39091` and appends payloads to
+`ios_head_logs/longying_head_render.log`. The iOS sender currently targets the
+development computer at `192.168.1.78:39091`. If that LAN address changes,
+update `RECEIVER_IP` in
+`frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp` and rebuild.
+
+On first launch, iOS may ask for local-network access. Tap **Allow**, enter the
+game, equip an outfit, and display the affected character. The package logs
+only meshes whose texture path contains `3d/c3btex/shape/`. Each matching
+texture binding and first mesh draw includes the actual texture/backend
+objects, material and program-state objects, palette size, vertex stride,
+index count, and raw UV bounds. The same lines are also appended to
+`longying_head_render.log` under the app writable path.
+
+Validate the computer-side receiver without a phone with:
+
+```powershell
+python tools_new/receive_ios_head_log.py --self-test
+```
+
+This diagnostic code and the `NSLocalNetworkUsageDescription` entry are
+temporary and must be removed after the device evidence identifies the final
+rendering fix.

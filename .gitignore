@@ -5,6 +5,7 @@
 /outres*.zip
 /build_ios/
 /ios_ipa_smoke/artifacts/
+/ios_head_logs/
 
 # Android and native generated output
 **/.gradle/

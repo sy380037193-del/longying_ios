@@ -233,9 +233,6 @@ protected:
     void resetLightUniformValues();
     void setLightUniforms(Pass* pass, Scene* scene, const Vec4& color, unsigned int lightmask);
     void bindMeshCommand();
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-    backend::Buffer* updateIosCpuSkinningBuffer(const Vec4* matrixPalette, ssize_t matrixPaletteRows);
-#endif
 
     std::map<NTextureData::Usage, Texture2D*> _textures; //textures that submesh is using
     MeshSkin*           _skin;     //skin
@@ -252,11 +249,6 @@ protected:
     AABB                _aabb;
     std::function<void()>       _visibleChanged;
     std::unordered_map<std::string, std::vector<MeshCommand> >    _meshCommands;
-
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-    backend::Buffer* _iosCpuSkinningBuffer = nullptr;
-    std::vector<float> _iosCpuSkinningVertices;
-#endif
     
     ///light parameters
     std::vector<Vec3>   _dirLightUniformColorValues;

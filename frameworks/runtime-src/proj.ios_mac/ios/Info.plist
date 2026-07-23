@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2019. All rights reserved.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Send rendering diagnostics to the development computer.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIPrerenderedIcon</key>

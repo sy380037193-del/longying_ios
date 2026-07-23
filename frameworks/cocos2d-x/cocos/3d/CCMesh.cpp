@@ -26,6 +26,7 @@
 #include "3d/CCMesh.h"
 #include "3d/CCMeshSkin.h"
 #include "3d/CCSkeleton3D.h"
+#include "3d/CCIOSHeadRenderDiagnostics.h"
 #include "3d/CCMeshVertexIndexData.h"
 #include "3d/CCVertexAttribBinding.h"
 #include "2d/CCLight.h"
@@ -39,14 +40,11 @@
 #include "renderer/CCPass.h"
 #include "renderer/CCRenderer.h"
 #include "renderer/backend/Buffer.h"
-#include "renderer/backend/Device.h"
 #include "renderer/backend/Program.h"
 #include "math/Mat4.h"
 #include "platform/CCPlatformMacros.h"
 
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-#include <cmath>
-#endif
+#include <sstream>
 
 using namespace std;
 
@@ -138,155 +136,7 @@ Mesh::~Mesh()
     CC_SAFE_RELEASE(_skin);
     CC_SAFE_RELEASE(_meshIndexData);
     CC_SAFE_RELEASE(_material);
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-    CC_SAFE_RELEASE(_iosCpuSkinningBuffer);
-#endif
 }
-
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-backend::Buffer* Mesh::updateIosCpuSkinningBuffer(const Vec4* matrixPalette, ssize_t matrixPaletteRows)
-{
-    const auto* vertexData = _meshIndexData->getMeshVertexData();
-    const auto& source = vertexData->_vertexData;
-    const auto& indices = _meshIndexData->_indexData;
-    const auto stride = vertexData->getSizePerVertex();
-    if (!matrixPalette || matrixPaletteRows <= 0 || source.empty() || indices.empty() || stride <= 0)
-        return nullptr;
-
-    int positionOffset = -1;
-    int normalOffset = -1;
-    int tangentOffset = -1;
-    int binormalOffset = -1;
-    int blendWeightOffset = -1;
-    int blendIndexOffset = -1;
-    backend::VertexFormat positionFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat normalFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat tangentFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat binormalFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat blendWeightFormat = backend::VertexFormat::FLOAT;
-    backend::VertexFormat blendIndexFormat = backend::VertexFormat::FLOAT;
-
-    int offset = 0;
-    for (const auto& attribute : vertexData->_attribs)
-    {
-        switch (attribute.vertexAttrib)
-        {
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_POSITION:
-                positionOffset = offset;
-                positionFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_NORMAL:
-                normalOffset = offset;
-                normalFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_TANGENT:
-                tangentOffset = offset;
-                tangentFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_BINORMAL:
-                binormalOffset = offset;
-                binormalFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_BLEND_WEIGHT:
-                blendWeightOffset = offset;
-                blendWeightFormat = attribute.type;
-                break;
-            case shaderinfos::VertexKey::VERTEX_ATTRIB_BLEND_INDEX:
-                blendIndexOffset = offset;
-                blendIndexFormat = attribute.type;
-                break;
-            default:
-                break;
-        }
-        offset += attribute.getAttribSizeBytes();
-    }
-
-    if (offset != stride || positionOffset < 0 || blendWeightOffset < 0 || blendIndexOffset < 0 ||
-        positionFormat != backend::VertexFormat::FLOAT3 ||
-        blendWeightFormat != backend::VertexFormat::FLOAT4 ||
-        blendIndexFormat != backend::VertexFormat::FLOAT4 ||
-        (normalOffset >= 0 && normalFormat != backend::VertexFormat::FLOAT3) ||
-        (tangentOffset >= 0 && tangentFormat != backend::VertexFormat::FLOAT3) ||
-        (binormalOffset >= 0 && binormalFormat != backend::VertexFormat::FLOAT3))
-    {
-        return nullptr;
-    }
-
-    const auto dataSize = source.size() * sizeof(source[0]);
-    if (dataSize % stride != 0)
-        return nullptr;
-
-    _iosCpuSkinningVertices = source;
-    const auto* sourceBytes = reinterpret_cast<const unsigned char*>(source.data());
-    auto* outputBytes = reinterpret_cast<unsigned char*>(_iosCpuSkinningVertices.data());
-    const auto vertexCount = dataSize / stride;
-
-    for (const auto vertexIndex : indices)
-    {
-        if (vertexIndex >= vertexCount)
-            return nullptr;
-
-        const auto* sourceVertex = sourceBytes + vertexIndex * stride;
-        auto* outputVertex = outputBytes + vertexIndex * stride;
-        const auto* position = reinterpret_cast<const float*>(sourceVertex + positionOffset);
-        const auto* weights = reinterpret_cast<const float*>(sourceVertex + blendWeightOffset);
-        const auto* blendIndices = reinterpret_cast<const float*>(sourceVertex + blendIndexOffset);
-
-        Vec4 rows[3] = {Vec4::ZERO, Vec4::ZERO, Vec4::ZERO};
-        for (int influence = 0; influence < 4; ++influence)
-        {
-            const float weight = weights[influence];
-            if (influence > 0 && weight <= 0.0f)
-                break;
-            if (!std::isfinite(weight) || !std::isfinite(blendIndices[influence]))
-                return nullptr;
-
-            const int boneIndex = static_cast<int>(blendIndices[influence]);
-            const int paletteOffset = boneIndex * 3;
-            if (boneIndex < 0 || paletteOffset + 2 >= matrixPaletteRows)
-                return nullptr;
-
-            for (int row = 0; row < 3; ++row)
-            {
-                const auto& paletteRow = matrixPalette[paletteOffset + row];
-                rows[row].x += paletteRow.x * weight;
-                rows[row].y += paletteRow.y * weight;
-                rows[row].z += paletteRow.z * weight;
-                rows[row].w += paletteRow.w * weight;
-            }
-        }
-
-        auto* outputPosition = reinterpret_cast<float*>(outputVertex + positionOffset);
-        outputPosition[0] = position[0] * rows[0].x + position[1] * rows[0].y + position[2] * rows[0].z + rows[0].w;
-        outputPosition[1] = position[0] * rows[1].x + position[1] * rows[1].y + position[2] * rows[1].z + rows[1].w;
-        outputPosition[2] = position[0] * rows[2].x + position[1] * rows[2].y + position[2] * rows[2].z + rows[2].w;
-
-        const int directionOffsets[] = {normalOffset, tangentOffset, binormalOffset};
-        for (const int directionOffset : directionOffsets)
-        {
-            if (directionOffset < 0)
-                continue;
-            const auto* direction = reinterpret_cast<const float*>(sourceVertex + directionOffset);
-            auto* outputDirection = reinterpret_cast<float*>(outputVertex + directionOffset);
-            outputDirection[0] = direction[0] * rows[0].x + direction[1] * rows[0].y + direction[2] * rows[0].z;
-            outputDirection[1] = direction[0] * rows[1].x + direction[1] * rows[1].y + direction[2] * rows[1].z;
-            outputDirection[2] = direction[0] * rows[2].x + direction[1] * rows[2].y + direction[2] * rows[2].z;
-        }
-    }
-
-    if (!_iosCpuSkinningBuffer || _iosCpuSkinningBuffer->getSize() != dataSize)
-    {
-        CC_SAFE_RELEASE(_iosCpuSkinningBuffer);
-        _iosCpuSkinningBuffer = backend::Device::getInstance()->newBuffer(
-            dataSize, backend::BufferType::VERTEX, backend::BufferUsage::DYNAMIC);
-    }
-    if (!_iosCpuSkinningBuffer)
-        return nullptr;
-
-    _iosCpuSkinningBuffer->updateData(_iosCpuSkinningVertices.data(), dataSize);
-    return _iosCpuSkinningBuffer;
-}
-#endif
 
 backend::Buffer* Mesh::getVertexBuffer() const
 {
@@ -429,7 +279,25 @@ void Mesh::setTexture(Texture2D* tex, NTextureData::Usage usage, bool cacheFileN
 
     CC_SAFE_RETAIN(tex);
     CC_SAFE_RELEASE(_textures[usage]);
-    _textures[usage] = tex;   
+    _textures[usage] = tex;
+
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    if (ios_head_render_diagnostics::isHeadTexturePath(tex->getPath()))
+    {
+        std::ostringstream line;
+        line << "event=texture_bind"
+             << " mesh=" << getName()
+             << " mesh_ptr=" << this
+             << " material_ptr=" << _material
+             << " usage=" << static_cast<int>(usage)
+             << " texture_ptr=" << tex
+             << " backend_texture_ptr=" << tex->getBackendTexture()
+             << " width=" << tex->getPixelsWide()
+             << " height=" << tex->getPixelsHigh()
+             << " path=" << tex->getPath();
+        ios_head_render_diagnostics::log(line.str());
+    }
+#endif
     
     if (usage == NTextureData::Usage::Diffuse){
         if (_material) {
@@ -556,34 +424,67 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
 
     _material->getStateBlock().setBlend(_force2DQueue || isTransparent);
 
-    backend::Buffer* vertexBuffer = getVertexBuffer();
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-    Vec4* matrixPalette = nullptr;
-    ssize_t matrixPaletteRows = 0;
-    float useIosCpuSkinning = 0.0f;
-    if (_skin)
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    Texture2D* diagnosticHeadTexture = nullptr;
+    for (const auto& texture : _textures)
     {
-        bool allPassesSupportCpuSkinning = true;
-        for (const auto pass : _material->_currentTechnique->_passes)
+        if (texture.second && ios_head_render_diagnostics::isHeadTexturePath(texture.second->getPath()))
         {
-            if (!pass->getProgramState()->getUniformLocation("u_iosCpuSkinning"))
-            {
-                allPassesSupportCpuSkinning = false;
-                break;
-            }
+            diagnosticHeadTexture = texture.second;
+            break;
+        }
+    }
+
+    if (diagnosticHeadTexture && ios_head_render_diagnostics::markFirstDraw(this))
+    {
+        const auto* vertexData = _meshIndexData->getMeshVertexData();
+        Vec2 uvMinimum;
+        Vec2 uvMaximum;
+        const bool hasUvBounds = _meshIndexData->getTexCoordBounds(&uvMinimum, &uvMaximum);
+
+        std::ostringstream line;
+        line << "event=first_draw"
+             << " mesh=" << getName()
+             << " mesh_ptr=" << this
+             << " material_ptr=" << _material
+             << " visible=" << _visible
+             << " force_2d=" << _force2DQueue
+             << " transparent=" << isTransparent
+             << " skin_ptr=" << _skin
+             << " palette_rows=" << (_skin ? _skin->getMatrixPaletteSize() : 0)
+             << " vertex_stride=" << vertexData->getSizePerVertex()
+             << " index_count=" << getIndexCount()
+             << " texture_ptr=" << diagnosticHeadTexture
+             << " backend_texture_ptr=" << diagnosticHeadTexture->getBackendTexture()
+             << " texture_path=" << diagnosticHeadTexture->getPath();
+        if (hasUvBounds)
+        {
+            line << " uv_min=" << uvMinimum.x << ',' << uvMinimum.y
+                 << " uv_max=" << uvMaximum.x << ',' << uvMaximum.y;
+        }
+        else
+        {
+            line << " uv_bounds=unavailable";
         }
 
-        matrixPalette = _skin->getMatrixPalette();
-        matrixPaletteRows = _skin->getMatrixPaletteSize();
-        if (allPassesSupportCpuSkinning)
+        size_t passIndex = 0;
+        for (const auto* pass : _material->_currentTechnique->_passes)
         {
-            auto* cpuSkinningBuffer = updateIosCpuSkinningBuffer(matrixPalette, matrixPaletteRows);
-            if (cpuSkinningBuffer)
+            auto* programState = pass->getProgramState();
+            line << " pass" << passIndex << "_state_ptr=" << programState;
+            for (const auto& textureInfo : programState->getFragmentTextureInfos())
             {
-                vertexBuffer = cpuSkinningBuffer;
-                useIosCpuSkinning = 1.0f;
+                line << " pass" << passIndex << "_fragment_location=" << textureInfo.first;
+                for (size_t i = 0; i < textureInfo.second.textures.size(); ++i)
+                {
+                    line << " pass" << passIndex << "_slot"
+                         << (i < textureInfo.second.slot.size() ? textureInfo.second.slot[i] : 0)
+                         << "=" << textureInfo.second.textures[i];
+                }
             }
+            ++passIndex;
         }
+        ios_head_render_diagnostics::log(line.str());
     }
 #endif
 
@@ -596,16 +497,7 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
         pass->setUniformColor(&color, sizeof(color));
 
         if (_skin)
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-        {
-            pass->setUniformMatrixPalette(matrixPalette, matrixPaletteRows * sizeof(matrixPalette[0]));
-            auto location = pass->getProgramState()->getUniformLocation("u_iosCpuSkinning");
-            if (location)
-                pass->getProgramState()->setUniform(location, &useIosCpuSkinning, sizeof(useIosCpuSkinning));
-        }
-#else
             pass->setUniformMatrixPalette(_skin->getMatrixPalette(), _skin->getMatrixPaletteSizeInBytes());
-#endif
 
         if (scene && scene->getLights().size() > 0)
         {
@@ -623,7 +515,7 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
     }
 
     _material->draw(commands.data(), globalZ,
-                    vertexBuffer,
+                    getVertexBuffer(),
                     getIndexBuffer(),
                     getPrimitiveType(),
                     getIndexFormat(),

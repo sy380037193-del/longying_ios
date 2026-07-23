@@ -132,11 +132,6 @@ bool ProgramCache::init()
 void ProgramCache::addProgram(ProgramType type)
 {
     Program* program = nullptr;
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
-    const std::string iosCpuSkinningDef = "\n#define CC_IOS_CPU_SKINNING 1\n";
-#else
-    const std::string iosCpuSkinningDef;
-#endif
     switch (type) {
         case ProgramType::POSITION_TEXTURE_COLOR:
             program = backend::Device::getInstance()->newProgram(positionTextureColor_vert, positionTextureColor_frag);
@@ -196,12 +191,12 @@ void ProgramCache::addProgram(ProgramType type)
             program = backend::Device::getInstance()->newProgram(CC3D_skybox_vert, CC3D_skybox_frag);
             break;
         case ProgramType::SKINPOSITION_TEXTURE_3D:
-            program = backend::Device::getInstance()->newProgram(iosCpuSkinningDef + CC3D_skinPositionTexture_vert, CC3D_colorTexture_frag);
+            program = backend::Device::getInstance()->newProgram(CC3D_skinPositionTexture_vert, CC3D_colorTexture_frag);
             break;
         case ProgramType::SKINPOSITION_NORMAL_TEXTURE_3D:
             {
                 std::string def = getShaderMacrosForLight();
-                program = backend::Device::getInstance()->newProgram(def + iosCpuSkinningDef + CC3D_skinPositionNormalTexture_vert, def + CC3D_colorNormalTexture_frag);
+                program = backend::Device::getInstance()->newProgram(def + CC3D_skinPositionNormalTexture_vert, def + CC3D_colorNormalTexture_frag);
             }
             break;
         case ProgramType::POSITION_NORMAL_TEXTURE_3D:
@@ -233,7 +228,7 @@ void ProgramCache::addProgram(ProgramType type)
             {
                 std::string def = getShaderMacrosForLight();
                 std::string normalMapDef = "\n#define USE_NORMAL_MAPPING 1 \n";
-                program = backend::Device::getInstance()->newProgram(def + normalMapDef + iosCpuSkinningDef + CC3D_skinPositionNormalTexture_vert, def + normalMapDef + CC3D_colorNormalTexture_frag);
+                program = backend::Device::getInstance()->newProgram(def + normalMapDef + CC3D_skinPositionNormalTexture_vert, def + normalMapDef + CC3D_colorNormalTexture_frag);
             }
             break;
         case ProgramType::TERRAIN_3D:

@@ -70,6 +70,15 @@ public:
     /** aabb getter and setter */
     void setAABB(const AABB& aabb) { _aabb = aabb; }
     const AABB& getAABB() const { return _aabb; }
+
+    bool getTexCoordBounds(Vec2* minimum, Vec2* maximum) const
+    {
+        if (!_hasTexCoordBounds)
+            return false;
+        *minimum = _texCoordMinimum;
+        *maximum = _texCoordMaximum;
+        return true;
+    }
     
     /** id setter and getter */
     void setId(const std::string& id) { _id = id; }
@@ -92,9 +101,11 @@ protected:
     std::string         _id; //id
     MeshCommand::PrimitiveType   _primitiveType = MeshCommand::PrimitiveType::TRIANGLE;
     MeshData::IndexArray _indexData;
+    bool _hasTexCoordBounds = false;
+    Vec2 _texCoordMinimum;
+    Vec2 _texCoordMaximum;
 
     friend class MeshVertexData;
-    friend class Mesh;
     friend class Sprite3D;
 #if CC_ENABLE_CACHE_TEXTURE_DATA
     EventListenerCustom* _backToForegroundListener = nullptr;

@@ -23,9 +23,11 @@
  THE SOFTWARE.
  ****************************************************************************/
 
+#include <algorithm>
 #include <list>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <sstream>
 
 #include "3d/CCMeshVertexIndexData.h"
@@ -81,7 +83,7 @@ MeshIndexData::MeshIndexData()
 
 void MeshIndexData::setIndexData(const cocos2d::MeshData::IndexArray &indexdata)
 {
-#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
+#if CC_ENABLE_CACHE_TEXTURE_DATA
     if(_indexData.size() > 0)
         return;
     _indexData = indexdata;
@@ -99,7 +101,7 @@ MeshIndexData::~MeshIndexData()
 
 void MeshVertexData::setVertexData(const std::vector<float> &vertexData)
 {
-#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
+#if CC_ENABLE_CACHE_TEXTURE_DATA
     if(_vertexData.size() > 0)
         return;
     _vertexData = vertexData;
@@ -115,13 +117,29 @@ MeshVertexData* MeshVertexData::create(const MeshData& meshdata)
     vertexdata->_sizePerVertex = meshdata.getPerVertexSize();
 
     vertexdata->_attribs = meshdata.attribs;
+
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    int texCoordOffset = 0;
+    bool hasFloat2TexCoord = false;
+    for (const auto& attribute : meshdata.attribs)
+    {
+        if (attribute.vertexAttrib == shaderinfos::VertexKey::VERTEX_ATTRIB_TEX_COORD &&
+            attribute.type == backend::VertexFormat::FLOAT2)
+        {
+            hasFloat2TexCoord = true;
+            break;
+        }
+        texCoordOffset += attribute.getAttribSizeBytes();
+    }
+
+    const size_t vertexBytes = meshdata.vertex.size() * sizeof(meshdata.vertex[0]);
+    const size_t stride = static_cast<size_t>(vertexdata->_sizePerVertex);
+#endif
     
     if(vertexdata->_vertexBuffer)
     {
-#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
-        vertexdata->setVertexData(meshdata.vertex);
-#endif
 #if CC_ENABLE_CACHE_TEXTURE_DATA
+        vertexdata->setVertexData(meshdata.vertex);
         vertexdata->_vertexBuffer->usingDefaultStoredData(false);
 #endif
         vertexdata->_vertexBuffer->updateData((void*)&meshdata.vertex[0], meshdata.vertex.size() * sizeof(meshdata.vertex[0]));
@@ -147,7 +165,33 @@ MeshVertexData* MeshVertexData::create(const MeshData& meshdata)
         }
         else
             indexdata = MeshIndexData::create(id, vertexdata, indexBuffer, meshdata.subMeshAABB[i]);
-#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+        if (hasFloat2TexCoord && stride > 0 && vertexBytes % stride == 0 && texCoordOffset + sizeof(Vec2) <= stride)
+        {
+            Vec2 minimum(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+            Vec2 maximum(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
+            const auto* bytes = reinterpret_cast<const unsigned char*>(meshdata.vertex.data());
+            const size_t vertexCount = vertexBytes / stride;
+            bool valid = !index.empty();
+            for (const auto vertexIndex : index)
+            {
+                if (vertexIndex >= vertexCount)
+                {
+                    valid = false;
+                    break;
+                }
+                const auto* uv = reinterpret_cast<const float*>(bytes + vertexIndex * stride + texCoordOffset);
+                minimum.x = std::min(minimum.x, uv[0]);
+                minimum.y = std::min(minimum.y, uv[1]);
+                maximum.x = std::max(maximum.x, uv[0]);
+                maximum.y = std::max(maximum.y, uv[1]);
+            }
+            indexdata->_hasTexCoordBounds = valid;
+            indexdata->_texCoordMinimum = minimum;
+            indexdata->_texCoordMaximum = maximum;
+        }
+#endif
+#if CC_ENABLE_CACHE_TEXTURE_DATA
         indexdata->setIndexData(index);
 #endif
         vertexdata->_indexs.pushBack(indexdata);

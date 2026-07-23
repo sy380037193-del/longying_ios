@@ -184,3 +184,33 @@
 - `docs/ios_ipa_smoke_build.md`: replaces the disproved mipmap explanation with the iOS CPU-skinning behavior and package marker.
 - `progress.md`: appends this implementation, validation evidence, file list, and rollback point.
 - Rollback: revert the commit created for this task, then push `main` to rebuild the preceding IPA.
+
+## 2026-07-23 - Task: Add retrievable iOS head-render diagnostics
+### What was done
+- Removed the disproved iOS CPU-skinning experiment and restored the original GPU skinning shaders and matrix-palette upload.
+- Added an iOS-only diagnostic path for head texture binding and first mesh draw state, with both app-writable-file and UDP delivery to the development computer.
+- Added raw UV-bound collection without retaining complete source vertex/index buffers, plus a local UDP receiver and the required iOS local-network usage description.
+- Kept Lua, C3B files, textures, encrypted `outres`, `version.json`, Android rendering, and the currently reverted mipmap experiment unchanged.
+### Testing
+- Ran `git diff --check` successfully.
+- Verified `CC_IOS_CPU_SKINNING`, `u_iosCpuSkinning`, `updateIosCpuSkinningBuffer`, and `_iosCpuSkinning` no longer occur under the Cocos source tree.
+- Ran `python -m py_compile tools_new/receive_ios_head_log.py` successfully.
+- Ran `python tools_new/receive_ios_head_log.py --self-test`; it bound `0.0.0.0:39091`, received the loopback payload, and verified the persisted line exactly.
+- Parsed the edited iOS `Info.plist` with Python `plistlib` and verified `NSLocalNetworkUsageDescription` is present. GitHub Actions compilation and real-device UDP receipt remain required.
+### Notes
+- `.gitignore`: excludes locally received iOS diagnostic logs.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.h`: declares the temporary head-path filter, first-draw limiter, and logger.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp`: appends iOS diagnostics locally and sends them to `192.168.1.78:39091` over UDP.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: removes CPU skinning and emits actual head texture/material/draw state.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.h`: removes CPU-skinning buffers and methods.
+- `frameworks/cocos2d-x/cocos/3d/CCMeshVertexIndexData.cpp`: restores normal source-data retention and calculates iOS UV bounds during upload.
+- `frameworks/cocos2d-x/cocos/3d/CCMeshVertexIndexData.h`: exposes stored UV bounds and removes CPU-skinning access.
+- `frameworks/cocos2d-x/cocos/3d/CMakeLists.txt`: registers the diagnostic source and header.
+- `frameworks/cocos2d-x/cocos/renderer/backend/ProgramCache.cpp`: restores original built-in skinning shader creation.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionNormalTexture.vert`: removes the iOS CPU-skinning bypass.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionTexture.vert`: removes the iOS CPU-skinning bypass.
+- `frameworks/runtime-src/proj.ios_mac/ios/Info.plist`: declares why the diagnostic package requests local-network access.
+- `tools_new/receive_ios_head_log.py`: receives, prints, persists, and self-tests the phone UDP diagnostics.
+- `docs/ios_ipa_smoke_build.md`: documents the temporary diagnostic workflow and cleanup boundary.
+- `progress.md`: appends this implementation, verification evidence, changed-file list, and rollback command.
+- Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to rebuild the prior package.
