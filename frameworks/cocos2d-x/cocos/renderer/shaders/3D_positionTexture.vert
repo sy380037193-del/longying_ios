@@ -52,12 +52,19 @@ const int SKINNING_JOINT_COUNT = 60;
 // Uniforms
 uniform vec4 u_matrixPalette[SKINNING_JOINT_COUNT * 3];
 uniform mat4 u_MVPMatrix;
+#ifdef CC_IOS_CPU_SKINNING
+uniform float u_iosCpuSkinning;
+#endif
 
 // Varyings
 varying vec2 TextureCoordOut;
 
 vec4 getPosition()
 {
+#ifdef CC_IOS_CPU_SKINNING
+    if (u_iosCpuSkinning > 0.5)
+        return vec4(a_position, 1.0);
+#endif
     float blendWeight = a_blendWeight[0];
 
     int matrixIndex = int (a_blendIndex[0]) * 3;

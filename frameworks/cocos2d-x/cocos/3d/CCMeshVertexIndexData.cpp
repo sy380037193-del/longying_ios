@@ -81,7 +81,7 @@ MeshIndexData::MeshIndexData()
 
 void MeshIndexData::setIndexData(const cocos2d::MeshData::IndexArray &indexdata)
 {
-#if CC_ENABLE_CACHE_TEXTURE_DATA
+#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
     if(_indexData.size() > 0)
         return;
     _indexData = indexdata;
@@ -99,7 +99,7 @@ MeshIndexData::~MeshIndexData()
 
 void MeshVertexData::setVertexData(const std::vector<float> &vertexData)
 {
-#if CC_ENABLE_CACHE_TEXTURE_DATA
+#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
     if(_vertexData.size() > 0)
         return;
     _vertexData = vertexData;
@@ -118,8 +118,10 @@ MeshVertexData* MeshVertexData::create(const MeshData& meshdata)
     
     if(vertexdata->_vertexBuffer)
     {
-#if CC_ENABLE_CACHE_TEXTURE_DATA
+#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
         vertexdata->setVertexData(meshdata.vertex);
+#endif
+#if CC_ENABLE_CACHE_TEXTURE_DATA
         vertexdata->_vertexBuffer->usingDefaultStoredData(false);
 #endif
         vertexdata->_vertexBuffer->updateData((void*)&meshdata.vertex[0], meshdata.vertex.size() * sizeof(meshdata.vertex[0]));
@@ -145,7 +147,7 @@ MeshVertexData* MeshVertexData::create(const MeshData& meshdata)
         }
         else
             indexdata = MeshIndexData::create(id, vertexdata, indexBuffer, meshdata.subMeshAABB[i]);
-#if CC_ENABLE_CACHE_TEXTURE_DATA
+#if CC_ENABLE_CACHE_TEXTURE_DATA || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL))
         indexdata->setIndexData(index);
 #endif
         vertexdata->_indexs.pushBack(indexdata);

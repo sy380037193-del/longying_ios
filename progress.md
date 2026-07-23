@@ -160,3 +160,27 @@
 ### Notes
 - `progress.md`: records the successful CI build, artifact identity, and remaining device-verification boundary.
 - Rollback: no runtime files changed in this verification task; remove only this appended record if the verification note must be reverted.
+
+## 2026-07-23 - Task: Replace failed iOS outfit experiments with submesh CPU skinning
+### What was done
+- Removed the disproved iOS Sprite3D mipmap and Metal mip-filter changes while keeping normal blink visibility behavior.
+- Added an iOS Metal compatibility path that CPU-skins only vertices referenced by each submesh's own index list and local bone palette.
+- Added shader bypasses for the built-in skinned Sprite3D programs; unsupported custom materials and invalid source data retain the original GPU path.
+- Kept Lua, C3B, textures, encrypted `outres`, `version.json`, and Android rendering unchanged.
+### Testing
+- Parsed all 502 C3B files under the full GameClient resource tree: 262 files contain meshes, and all 1,201 skinned submeshes passed vertex-index and local-palette bounds validation with zero errors.
+- Verified the dynamic iOS Metal vertex buffers use the engine's existing triple-buffered implementation.
+- Verified CPU skinning is enabled only after every active material pass exposes `u_iosCpuSkinning`, preventing custom shaders from applying CPU and GPU skinning twice.
+- Ran `git diff --check` before documentation updates; GitHub Actions Release compilation and packaged-executable marker verification remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCMeshVertexIndexData.h`: allows Mesh to read the retained per-submesh source indices.
+- `frameworks/cocos2d-x/cocos/3d/CCMeshVertexIndexData.cpp`: retains original vertex and index data only for Android cache recovery or iOS Metal CPU skinning.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.h`: stores the iOS-only dynamic CPU-skinned vertex buffer.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: performs per-submesh CPU skinning and selects it only for compatible iOS Metal shader passes.
+- `frameworks/cocos2d-x/cocos/renderer/backend/ProgramCache.cpp`: enables the CPU-skinning shader switch only in iOS Metal built-in skinning programs.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionTexture.vert`: bypasses GPU position skinning when iOS supplies CPU-skinned vertices.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionNormalTexture.vert`: bypasses GPU position and direction skinning when iOS supplies CPU-skinned vertices.
+- `frameworks/cocos2d-x/cocos/renderer/backend/metal/TextureMTL.mm`: removes the disproved custom mip-filter mapping and restores the original Metal sampler behavior.
+- `docs/ios_ipa_smoke_build.md`: replaces the disproved mipmap explanation with the iOS CPU-skinning behavior and package marker.
+- `progress.md`: appends this implementation, validation evidence, file list, and rollback point.
+- Rollback: revert the commit created for this task, then push `main` to rebuild the preceding IPA.

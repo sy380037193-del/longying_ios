@@ -55,15 +55,22 @@ Do not commit local Android build caches, APKs, IPAs, `build_ios`, full
 `resources`, generated `outres`, or generated ZIP packages into this skeleton
 repository.
 
-## iOS Sprite3D Minification
+## iOS Metal CPU Skinning Compatibility
 
-The outfit preview renders 512x512 character atlases on very small 3D meshes.
-The Metal backend now generates mipmaps for Sprite3D diffuse textures and uses
-trilinear minification. This prevents high-contrast face and leg details from
-collapsing into coarse dark blocks when the role is shown at preview scale.
+The iOS Metal build uses CPU skinning for built-in skinned Sprite3D materials
+and lets the vertex shader consume the resulting positions and normals
+directly. This bypasses the Metal GPU skinning path that deforms outfit face
+and leg meshes incorrectly, while Android and non-Metal builds keep their
+original rendering path.
 
-The Metal sampler maps every mipmap filter enum to the matching
-`MTLSamplerMipFilter`; the original backend left this field at the default and
-therefore could not sample generated mip levels. The change is native to the
-iOS IPA, keeps the original C3B and texture files unchanged, and does not lock
-or hide the `bone_biyan` blink mesh.
+C3B files can share one vertex buffer between several submeshes, but each
+submesh has its own local bone palette. The compatibility path therefore
+retains the source vertices and indices on iOS and transforms only vertices
+referenced by the current submesh. It falls back to the original GPU path when
+a custom shader does not expose the CPU-skinning switch or when source data
+does not pass validation.
+
+The implementation does not alter Lua, C3B files, textures, `outres`, or
+`version.json`. A rebuilt IPA can be checked for the string
+`u_iosCpuSkinning` before installation to confirm that this native path is in
+the packaged executable.

@@ -65,20 +65,6 @@ namespace
                 return MTLSamplerMinMagFilterNearest;
         }
     }
-
-    MTLSamplerMipFilter toMTLSamplerMipFilter(SamplerFilter mode)
-    {
-        switch (mode) {
-            case SamplerFilter::NEAREST_MIPMAP_NEAREST:
-            case SamplerFilter::LINEAR_MIPMAP_NEAREST:
-                return MTLSamplerMipFilterNearest;
-            case SamplerFilter::NEAREST_MIPMAP_LINEAR:
-            case SamplerFilter::LINEAR_MIPMAP_LINEAR:
-                return MTLSamplerMipFilterLinear;
-            default:
-                return MTLSamplerMipFilterNotMipmapped;
-        }
-    }
     
     void convertRGB2RGBA(uint8_t* src, uint8_t* dst, std::size_t length)
     {
@@ -309,7 +295,6 @@ void TextureMTL::createSampler(id<MTLDevice> mtlDevice, const SamplerDescriptor 
     
     mtlDescriptor.minFilter = descriptor.minFilter == SamplerFilter::DONT_CARE ? _minFilter : toMTLSamplerMinMagFilter(descriptor.minFilter);
     mtlDescriptor.magFilter = descriptor.magFilter == SamplerFilter::DONT_CARE ? _magFilter : toMTLSamplerMinMagFilter(descriptor.magFilter);
-    mtlDescriptor.mipFilter = descriptor.minFilter == SamplerFilter::DONT_CARE ? _mipFilter : toMTLSamplerMipFilter(descriptor.minFilter);
     
     if(_mtlSamplerState)
     {
@@ -428,7 +413,6 @@ void TextureCubeMTL::createSampler(id<MTLDevice> mtlDevice, const SamplerDescrip
     
     mtlDescriptor.minFilter = descriptor.minFilter == SamplerFilter::DONT_CARE ? _minFilter : toMTLSamplerMinMagFilter(descriptor.minFilter);
     mtlDescriptor.magFilter = descriptor.magFilter == SamplerFilter::DONT_CARE ? _magFilter : toMTLSamplerMinMagFilter(descriptor.magFilter);
-    mtlDescriptor.mipFilter = descriptor.minFilter == SamplerFilter::DONT_CARE ? _mipFilter : toMTLSamplerMipFilter(descriptor.minFilter);
     
     if(_mtlSamplerState)
     {
