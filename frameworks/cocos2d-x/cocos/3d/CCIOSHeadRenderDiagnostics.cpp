@@ -4,8 +4,6 @@
 #include "platform/CCFileUtils.h"
 #include "platform/CCPlatformConfig.h"
 
-#include <algorithm>
-#include <cctype>
 #include <fstream>
 #include <mutex>
 #include <unordered_set>
@@ -50,15 +48,6 @@ void emit(const std::string& line)
 #endif
 }
 
-bool isHeadTexturePath(const std::string& path)
-{
-    std::string normalized = path;
-    std::replace(normalized.begin(), normalized.end(), '\\', '/');
-    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
-                   [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
-    return normalized.find("3d/c3btex/shape/") != std::string::npos;
-}
-
 bool markFirstDraw(const void* mesh)
 {
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
@@ -79,7 +68,7 @@ void log(const std::string& line)
     std::lock_guard<std::mutex> lock(mutex);
     if (!markerWritten)
     {
-        emit("marker=LONGYING_IOS_HEAD_DIAGNOSTICS_V1 receiver=192.168.1.78:39091");
+        emit("marker=LONGYING_IOS_HEAD_DIAGNOSTICS_V2 receiver=192.168.1.78:39091");
         markerWritten = true;
     }
     emit(line);

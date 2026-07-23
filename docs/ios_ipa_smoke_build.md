@@ -75,12 +75,13 @@ development computer at `192.168.1.78:39091`. If that LAN address changes,
 update `RECEIVER_IP` in
 `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp` and rebuild.
 
-On first launch, iOS may ask for local-network access. Tap **Allow**, enter the
-game, equip an outfit, and display the affected character. The package logs
-only meshes whose texture path contains `3d/c3btex/shape/`. Each matching
-texture binding and first mesh draw includes the actual texture/backend
-objects, material and program-state objects, palette size, vertex stride,
-index count, and raw UV bounds. The same lines are also appended to
+On first launch, the app immediately sends an `app_launch` handshake so iOS
+can request local-network access. Tap **Allow**, enter the game, equip an
+outfit, and display the affected character. The package then logs the first
+draw of every textured, skinned 3D mesh instead of relying on a clear-text
+resource path. Each line includes the actual texture/backend objects, material
+and program-state objects, palette size, vertex stride, index count, and raw
+per-submesh UV bounds. The same lines are also appended to
 `longying_head_render.log` under the app writable path.
 
 Validate the computer-side receiver without a phone with:

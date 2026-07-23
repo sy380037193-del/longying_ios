@@ -214,3 +214,21 @@
 - `docs/ios_ipa_smoke_build.md`: documents the temporary diagnostic workflow and cleanup boundary.
 - `progress.md`: appends this implementation, verification evidence, changed-file list, and rollback command.
 - Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to rebuild the prior package.
+
+## 2026-07-23 - Task: Make iOS diagnostics trigger independently of encrypted paths
+### What was done
+- Confirmed the first diagnostic IPA displayed the abnormal 3D face but emitted no UDP lines and did not request local-network access, proving the clear-text head-path filter never triggered.
+- Added an iOS application-launch handshake so the diagnostic sender runs before Lua or encrypted resources load.
+- Replaced the clear-text texture-path filter with a first-draw filter for textured, skinned 3D meshes and kept one log per mesh to avoid per-frame flooding.
+### Testing
+- Confirmed the computer receiver remained bound to `0.0.0.0:39091` while the first diagnostic IPA produced no phone payloads.
+- Verified the launch handshake is iOS-only and the broadened draw logger still requires both a skin and a texture.
+- GitHub Actions compilation, launch handshake receipt, iOS local-network prompt, and real outfit draw logs remain required.
+### Notes
+- `frameworks/runtime-src/Classes/AppDelegate.cpp`: sends the iOS diagnostic handshake at application launch.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.h`: removes the obsolete clear-text head-path filter declaration.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp`: removes path filtering support and changes the package marker to diagnostics V2.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: logs first draws for all textured, skinned 3D meshes regardless of encrypted runtime path.
+- `docs/ios_ipa_smoke_build.md`: documents the immediate handshake and path-independent mesh trigger.
+- `progress.md`: appends the failed-trigger evidence, replacement behavior, verification boundary, and rollback command.
+- Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the V1 path-filtered diagnostic package.

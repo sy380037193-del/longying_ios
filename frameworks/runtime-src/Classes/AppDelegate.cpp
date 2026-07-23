@@ -35,6 +35,7 @@ http://www.cocos2d-x.org
  ****************************************************************************/
 
 #include "AppDelegate.h"
+#include "3d/CCIOSHeadRenderDiagnostics.h"
 #include "scripting/lua-bindings/manual/CCLuaEngine.h"
 #include "cocos2d.h"
 #include "scripting/lua-bindings/manual/lua_module_register.h"
@@ -111,6 +112,10 @@ static void decoder(Data &data)
 
 bool AppDelegate::applicationDidFinishLaunching()
 {
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    cocos2d::ios_head_render_diagnostics::log("event=app_launch stage=applicationDidFinishLaunching");
+#endif
+
     // initialize director
     auto director = Director::getInstance();
     auto glview = director->getOpenGLView();

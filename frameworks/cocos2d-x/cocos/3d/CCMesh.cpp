@@ -280,24 +280,6 @@ void Mesh::setTexture(Texture2D* tex, NTextureData::Usage usage, bool cacheFileN
     CC_SAFE_RETAIN(tex);
     CC_SAFE_RELEASE(_textures[usage]);
     _textures[usage] = tex;
-
-#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
-    if (ios_head_render_diagnostics::isHeadTexturePath(tex->getPath()))
-    {
-        std::ostringstream line;
-        line << "event=texture_bind"
-             << " mesh=" << getName()
-             << " mesh_ptr=" << this
-             << " material_ptr=" << _material
-             << " usage=" << static_cast<int>(usage)
-             << " texture_ptr=" << tex
-             << " backend_texture_ptr=" << tex->getBackendTexture()
-             << " width=" << tex->getPixelsWide()
-             << " height=" << tex->getPixelsHigh()
-             << " path=" << tex->getPath();
-        ios_head_render_diagnostics::log(line.str());
-    }
-#endif
     
     if (usage == NTextureData::Usage::Diffuse){
         if (_material) {
@@ -425,17 +407,14 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
     _material->getStateBlock().setBlend(_force2DQueue || isTransparent);
 
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
-    Texture2D* diagnosticHeadTexture = nullptr;
-    for (const auto& texture : _textures)
-    {
-        if (texture.second && ios_head_render_diagnostics::isHeadTexturePath(texture.second->getPath()))
-        {
-            diagnosticHeadTexture = texture.second;
-            break;
-        }
-    }
+    Texture2D* diagnosticTexture = nullptr;
+    const auto diffuseTexture = _textures.find(NTextureData::Usage::Diffuse);
+    if (diffuseTexture != _textures.end())
+        diagnosticTexture = diffuseTexture->second;
+    else if (!_textures.empty())
+        diagnosticTexture = _textures.begin()->second;
 
-    if (diagnosticHeadTexture && ios_head_render_diagnostics::markFirstDraw(this))
+    if (_skin && diagnosticTexture && ios_head_render_diagnostics::markFirstDraw(this))
     {
         const auto* vertexData = _meshIndexData->getMeshVertexData();
         Vec2 uvMinimum;
@@ -454,9 +433,11 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
              << " palette_rows=" << (_skin ? _skin->getMatrixPaletteSize() : 0)
              << " vertex_stride=" << vertexData->getSizePerVertex()
              << " index_count=" << getIndexCount()
-             << " texture_ptr=" << diagnosticHeadTexture
-             << " backend_texture_ptr=" << diagnosticHeadTexture->getBackendTexture()
-             << " texture_path=" << diagnosticHeadTexture->getPath();
+             << " texture_ptr=" << diagnosticTexture
+             << " backend_texture_ptr=" << diagnosticTexture->getBackendTexture()
+             << " texture_width=" << diagnosticTexture->getPixelsWide()
+             << " texture_height=" << diagnosticTexture->getPixelsHigh()
+             << " texture_path=" << diagnosticTexture->getPath();
         if (hasUvBounds)
         {
             line << " uv_min=" << uvMinimum.x << ',' << uvMinimum.y
