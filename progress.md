@@ -286,3 +286,21 @@
 - `docs/ios_ipa_smoke_build.md`: records the V3 device result and V4 restored behavior.
 - `progress.md`: appends the device evidence, rollback, and verification boundary.
 - Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the disproved V3 raw-V package.
+
+## 2026-07-23 - Task: Add evidence-only iOS head orientation diagnostics
+### What was done
+- Used the V4 phone launch and 37 first-draw records to confirm the restored package is active, all head texture slots match, and the original face-only artifact remains.
+- Kept rendering behavior unchanged and extended the existing first-draw record with model-view and first skin-palette matrices, their 3x3 determinants, and material cull, winding, and depth state.
+- Advanced the package marker to V5 so the evidence-only build cannot be confused with V4.
+### Testing
+- Verified the V4 phone segment starts at line 307, contains one application launch and 37 first draws, and contains no Mesh-to-slot-0 texture mismatch.
+- Ran `git diff --check` successfully after the edit.
+- Ran `python tools_new/receive_ios_head_log.py --self-test --port 39092` successfully while the live phone receiver remained bound to port 39091.
+- No local C++ compiler is available on this Windows computer; GitHub Actions compilation, V5 marker receipt, and real-device matrix/state evidence remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/renderer/CCRenderState.h`: grants Mesh read-only diagnostic access to the fixed-function StateBlock fields without adding a public API.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: emits transform, skin-palette, cull, winding, and depth evidence in the existing iOS-only first-draw line.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp`: identifies the evidence-only package as diagnostics V5.
+- `docs/ios_ipa_smoke_build.md`: documents the V4 device result and the V5 diagnostic boundary.
+- `progress.md`: appends this implementation, verification boundary, changed-file list, and rollback command.
+- Rollback: run `git revert --no-edit HEAD` and `git push origin main` after this task commit is created.

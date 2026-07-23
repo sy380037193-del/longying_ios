@@ -43,6 +43,7 @@ NS_CC_BEGIN
 
 class Texture2D;
 class Pass;
+class Mesh;
 class MeshCommand;
 
 using CullFaceSide = backend::CullMode;
@@ -79,6 +80,7 @@ public:
         friend class Pass;
         friend class RenderQueue;
         friend class Renderer;
+        friend class Mesh;
         
     public:
         /**

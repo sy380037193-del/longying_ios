@@ -106,3 +106,13 @@ is also rebound to slot 0 of every active material pass. This prevents a
 submesh from drawing with a different dress texture left in its ProgramState.
 The V4 diagnostic package records both the Mesh backend texture and the
 fragment slot-0 backend texture after the final rebind.
+
+## V5 iOS Head Orientation Diagnostics
+
+The V4 real-device test restored the original face-only artifact and confirmed
+that every logged Mesh diffuse texture matched fragment slot 0. V5 does not
+change rendering. Its first-draw record additionally includes the model-view
+matrix and determinant, the first skin-palette matrix and determinant, and the
+material cull, winding, and depth state. These fields distinguish a mirrored or
+reversed head transform from a skin-palette or fixed-function state problem
+without cycling visual rendering experiments.

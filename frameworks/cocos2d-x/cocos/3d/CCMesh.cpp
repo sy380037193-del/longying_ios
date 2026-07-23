@@ -427,6 +427,13 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
         Vec2 uvMinimum;
         Vec2 uvMaximum;
         const bool hasUvBounds = _meshIndexData->getTexCoordBounds(&uvMinimum, &uvMaximum);
+        const auto& stateBlock = _material->getStateBlock();
+        const float transformDeterminant =
+            transform.m[0] * (transform.m[5] * transform.m[10] - transform.m[9] * transform.m[6]) -
+            transform.m[4] * (transform.m[1] * transform.m[10] - transform.m[9] * transform.m[2]) +
+            transform.m[8] * (transform.m[1] * transform.m[6] - transform.m[5] * transform.m[2]);
+        Vec4* palette = _skin->getMatrixPalette();
+        const ssize_t paletteRows = _skin->getMatrixPaletteSize();
 
         std::ostringstream line;
         line << "event=first_draw"
@@ -437,8 +444,34 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
              << " force_2d=" << _force2DQueue
              << " transparent=" << isTransparent
              << " skin_ptr=" << _skin
-             << " palette_rows=" << (_skin ? _skin->getMatrixPaletteSize() : 0)
-             << " vertex_stride=" << vertexData->getSizePerVertex()
+             << " palette_rows=" << paletteRows
+             << " cull_enabled=" << stateBlock._cullFaceEnabled
+             << " cull_side=" << static_cast<int>(stateBlock._cullFaceSide)
+             << " front_face=" << static_cast<int>(stateBlock._frontFace)
+             << " depth_test=" << stateBlock._depthTestEnabled
+             << " depth_write=" << stateBlock._depthWriteEnabled
+             << " state_bits=" << stateBlock._modifiedBits
+             << " mv_det3=" << transformDeterminant
+             << " mv=";
+        for (size_t i = 0; i < 16; ++i)
+        {
+            if (i > 0)
+                line << ',';
+            line << transform.m[i];
+        }
+        if (paletteRows >= 3)
+        {
+            const float paletteDeterminant =
+                palette[0].x * (palette[1].y * palette[2].z - palette[1].z * palette[2].y) -
+                palette[0].y * (palette[1].x * palette[2].z - palette[1].z * palette[2].x) +
+                palette[0].z * (palette[1].x * palette[2].y - palette[1].y * palette[2].x);
+            line << " palette0_det3=" << paletteDeterminant
+                 << " palette0="
+                 << palette[0].x << ',' << palette[0].y << ',' << palette[0].z << ',' << palette[0].w << ','
+                 << palette[1].x << ',' << palette[1].y << ',' << palette[1].z << ',' << palette[1].w << ','
+                 << palette[2].x << ',' << palette[2].y << ',' << palette[2].z << ',' << palette[2].w;
+        }
+        line << " vertex_stride=" << vertexData->getSizePerVertex()
              << " index_count=" << getIndexCount()
              << " texture_ptr=" << diagnosticTexture
              << " backend_texture_ptr=" << diagnosticTexture->getBackendTexture()
