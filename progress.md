@@ -304,3 +304,15 @@
 - `docs/ios_ipa_smoke_build.md`: documents the V4 device result and the V5 diagnostic boundary.
 - `progress.md`: appends this implementation, verification boundary, changed-file list, and rollback command.
 - Rollback: run `git revert --no-edit HEAD` and `git push origin main` after this task commit is created.
+
+## 2026-07-23 - Task: Record V5 iOS build verification
+### What was done
+- Confirmed GitHub Actions built the V5 evidence-only diagnostic IPA successfully from commit `70ee49e`.
+- Recorded the successful run and artifact identity without changing code or triggering another package build.
+### Testing
+- GitHub Actions run `30010821367` completed successfully in 7 minutes 2 seconds.
+- The run produced the `longying-ios-smoke` artifact with displayed size 86.9 MB and SHA-256 digest `0e414fb11a8800c01150ab6cab94b401e282a73c8aa95e4a75d4d51f6a071592`.
+- V5 marker receipt and real-device matrix/state evidence remain required after the full encrypted `outres` is inserted and the IPA is installed.
+### Notes
+- `progress.md`: appends the successful V5 GitHub Actions build and remaining real-device verification boundary.
+- Rollback: run `git revert --no-edit HEAD` and `git push origin main` after this documentation-only commit is created.
