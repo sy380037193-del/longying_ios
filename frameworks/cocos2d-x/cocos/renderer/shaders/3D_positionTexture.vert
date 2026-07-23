@@ -36,9 +36,7 @@ void main(void)
 {
     gl_Position = u_MVPMatrix * a_position;
     TextureCoordOut = a_texCoord;
-#ifndef CC_IOS_METAL_SPRITE3D
     TextureCoordOut.y = 1.0 - TextureCoordOut.y;
-#endif
 }
 )";
 
@@ -111,9 +109,7 @@ void main()
     gl_Position = u_MVPMatrix * position;
 
     TextureCoordOut = a_texCoord;
-#ifndef CC_IOS_METAL_SPRITE3D
     TextureCoordOut.y = 1.0 - TextureCoordOut.y;
-#endif
 }
 
 )";

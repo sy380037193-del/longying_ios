@@ -96,14 +96,13 @@ rendering fix.
 
 ## iOS Metal Sprite3D Texture Compatibility
 
-The iOS Metal build keeps the raw C3B V coordinate in the built-in textured
-Sprite3D vertex programs. Android, OpenGL, particles, 2D UI, and non-textured
-3D programs keep the engine's original `1.0 - y` behavior. This prevents the
-Metal outfit renderer from selecting the vertically mirrored region of the
-head and dress texture atlases.
+The V3 real-device test disproved the iOS raw-V experiment: it selected the
+wrong vertical regions across head and dress atlases, producing green heads
+and widespread outfit corruption. V4 restores the engine's original
+`1.0 - y` behavior for every textured Sprite3D program.
 
 Immediately before an iOS Mesh is submitted, its own diffuse backend texture
 is also rebound to slot 0 of every active material pass. This prevents a
 submesh from drawing with a different dress texture left in its ProgramState.
-The V3 diagnostic package verifies this by recording both the Mesh backend
-texture and the fragment slot-0 backend texture after the final rebind.
+The V4 diagnostic package records both the Mesh backend texture and the
+fragment slot-0 backend texture after the final rebind.

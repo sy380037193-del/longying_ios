@@ -266,3 +266,23 @@
 - `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: changes the local pass pointer from const to mutable so the existing non-const setter compiles.
 - `progress.md`: appends this compile-fix record and verification boundary.
 - Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the compile-failing V3 source.
+
+## 2026-07-23 - Task: Revert disproved iOS raw-V atlas sampling
+### What was done
+- Used V3 phone logs and screenshots to confirm that raw C3B V coordinates selected incorrect vertical atlas regions across heads and outfits.
+- Restored the engine's original `1.0 - y` Sprite3D texture-coordinate conversion on iOS while retaining the verified final per-mesh texture-slot binding.
+- Advanced the phone diagnostic marker to V4 so the restored package can be distinguished from V3 without relying on the app version string.
+### Testing
+- Received the V3 launch marker and 90 first-draw records from the installed phone package.
+- Verified all 90 records had matching Mesh backend textures and fragment slot-0 textures, while the accompanying screenshots showed green heads and widespread atlas corruption.
+- Verified the iOS-only raw-V macro no longer occurs in ProgramCache or the textured Sprite3D shaders.
+- Ran `git diff --check` successfully after the edit.
+- GitHub Actions compilation, IPA generation, and V4 real-device visual verification remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/renderer/backend/ProgramCache.cpp`: removes the disproved iOS raw-V shader macro injection.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionTexture.vert`: restores unconditional V conversion for unlit textured Sprite3D programs.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionNormalTexture.vert`: restores unconditional V conversion for lit and normal-mapped textured Sprite3D programs.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp`: identifies the restored verification package as diagnostics V4.
+- `docs/ios_ipa_smoke_build.md`: records the V3 device result and V4 restored behavior.
+- `progress.md`: appends the device evidence, rollback, and verification boundary.
+- Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the disproved V3 raw-V package.

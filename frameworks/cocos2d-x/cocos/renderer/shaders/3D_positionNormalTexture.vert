@@ -137,9 +137,7 @@ void main(void)
 #endif
 
     TextureCoordOut = a_texCoord;
-#ifndef CC_IOS_METAL_SPRITE3D
     TextureCoordOut.y = 1.0 - TextureCoordOut.y;
-#endif
     gl_Position = u_PMatrix * ePosition;
 }
 )";
@@ -338,9 +336,7 @@ void main()
 #endif
 
     TextureCoordOut = a_texCoord;
-#ifndef CC_IOS_METAL_SPRITE3D
     TextureCoordOut.y = 1.0 - TextureCoordOut.y;
-#endif
     gl_Position = u_PMatrix * ePosition;
 }
 
