@@ -148,3 +148,15 @@
 - `docs/ios_ipa_smoke_build.md`: replaces the disproved closed-eye diagnosis with the Sprite3D minification behavior.
 - `progress.md`: appends the implementation, evidence, validation boundary, files, and rollback point.
 - Rollback: revert this task commit after it is created, then push `main` to rebuild the preceding IPA.
+
+## 2026-07-23 - Task: Verify iOS Sprite3D minification IPA build
+### What was done
+- Confirmed GitHub Actions built the iOS Sprite3D minification change successfully from commit `d4e7507`.
+- Confirmed the workflow produced the `longying-ios-smoke` artifact for device installation.
+### Testing
+- GitHub Actions run `29981884611` completed successfully in 4m 52s.
+- The uploaded artifact is 87.6 MB with digest `sha256:2df5694ebf263953ee20f68eb122db5e0fb6f38b2a6d2bc129daf99dd506994f`.
+- Real-device visual verification remains pending because Windows did not enumerate an Apple USB device and `pymobiledevice3 usbmux list` returned no devices.
+### Notes
+- `progress.md`: records the successful CI build, artifact identity, and remaining device-verification boundary.
+- Rollback: no runtime files changed in this verification task; remove only this appended record if the verification note must be reverted.
