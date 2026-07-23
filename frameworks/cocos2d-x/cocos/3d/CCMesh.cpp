@@ -41,6 +41,7 @@
 #include "renderer/backend/Buffer.h"
 #include "renderer/backend/Program.h"
 #include "math/Mat4.h"
+#include "platform/CCPlatformMacros.h"
 
 using namespace std;
 
@@ -114,7 +115,6 @@ static Texture2D * getDummyTexture()
 Mesh::Mesh()
 : _skin(nullptr)
 , _visible(true)
-, _visibilityLocked(false)
 , _isTransparent(false)
 , _force2DQueue(false)
 , _meshIndexData(nullptr)
@@ -241,9 +241,6 @@ Mesh* Mesh::create(const std::string& name, MeshIndexData* indexData, MeshSkin* 
 
 void Mesh::setVisible(bool visible)
 {
-    if (_visibilityLocked && visible)
-        return;
-
     if (_visible != visible)
     {
         _visible = visible;
@@ -276,6 +273,19 @@ void Mesh::setTexture(Texture2D* tex, NTextureData::Usage usage, bool cacheFileN
     // This functionality is added for compatibility issues
     if (tex == nullptr)
         tex = getDummyTexture();
+
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
+    if (usage == NTextureData::Usage::Diffuse)
+    {
+        tex->generateMipmap();
+        Texture2D::TexParams texParams(
+            backend::SamplerFilter::LINEAR,
+            tex->hasMipmaps() ? backend::SamplerFilter::LINEAR_MIPMAP_LINEAR : backend::SamplerFilter::LINEAR,
+            backend::SamplerAddressMode::DONT_CARE,
+            backend::SamplerAddressMode::DONT_CARE);
+        tex->setTexParameters(texParams);
+    }
+#endif
     
     CC_SAFE_RETAIN(tex);
     CC_SAFE_RELEASE(_textures[usage]);

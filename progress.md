@@ -127,3 +127,24 @@
 - `docs/ios_ipa_smoke_build.md`: records the permanent-hide behavior, disabled blink overlay, and IPA rebuild boundary.
 - `progress.md`: appends the diagnosis, implementation, verification, changed-file list, and rollback point for this task.
 - Rollback: revert this task commit, then push `main` to rebuild the previous create-time-hide IPA.
+
+## 2026-07-23 - Task: Fix iOS Sprite3D texture minification
+### What was done
+- Removed the disproved native lock that permanently hid `bone_biyan` meshes and restored normal Lua blink visibility control.
+- Enabled mipmap generation and trilinear minification for Sprite3D diffuse textures only on iOS Metal.
+- Completed the Metal sampler mapping so mipmap minification modes select the required Metal mip filter.
+- Kept C3B files, texture payloads, Lua behavior, Android code paths, and outfit selection unchanged.
+### Testing
+- Parsed the actual `2013.c3b` head used by the screenshots and verified the normal face is `shape2_part1`, while the separately hidden `shape4_part1` is only the blink overlay.
+- Rendered the normal face mesh offline from its real vertices and UVs and verified the C3B and `batch_head_d_1.png` mapping is structurally correct.
+- Verified all three relevant 512x512 head atlases are effectively opaque, ruling out the prior transparent-depth hypothesis.
+- Verified the Metal sampler now maps nearest and linear mipmap modes to `MTLSamplerMipFilterNearest` and `MTLSamplerMipFilterLinear` respectively.
+- GitHub Actions compilation and final device visual verification remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: removes the failed visibility lock and applies iOS mipmapped filtering at the final diffuse-texture binding point.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.h`: removes the failed hidden-visibility lock API and field.
+- `frameworks/cocos2d-x/cocos/3d/CCSprite3D.cpp`: restores normal blink mesh creation without changing model or texture selection.
+- `frameworks/cocos2d-x/cocos/renderer/backend/metal/TextureMTL.mm`: maps backend mipmap filters to Metal sampler mip filters.
+- `docs/ios_ipa_smoke_build.md`: replaces the disproved closed-eye diagnosis with the Sprite3D minification behavior.
+- `progress.md`: appends the implementation, evidence, validation boundary, files, and rollback point.
+- Rollback: revert this task commit after it is created, then push `main` to rebuild the preceding IPA.

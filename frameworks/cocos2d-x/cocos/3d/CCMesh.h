@@ -135,12 +135,6 @@ public:
     /**visible getter and setter*/
     void setVisible(bool visible);
     bool isVisible() const;
-
-    /**
-     * Keep a mesh hidden when script code tries to show it.
-     * @lua NA
-     */
-    void lockVisibilityHidden() { _visibilityLocked = true; _visible = false; }
     
     /**
      * skin getter
@@ -243,7 +237,6 @@ protected:
     std::map<NTextureData::Usage, Texture2D*> _textures; //textures that submesh is using
     MeshSkin*           _skin;     //skin
     bool                _visible; // is the submesh visible
-    bool                _visibilityLocked; // keep protected meshes hidden
     bool                _isTransparent; // is this mesh transparent, it is a property of material in fact
     bool                _force2DQueue; // add this mesh to 2D render queue
     

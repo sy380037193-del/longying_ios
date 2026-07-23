@@ -46,16 +46,9 @@
 #include "renderer/CCTechnique.h"
 #include "renderer/CCPass.h"
 
-#include <algorithm>
-
 NS_CC_BEGIN
 
 static Sprite3DMaterial* getSprite3DMaterialForAttribs(MeshVertexData* meshVertexData, bool usesLight);
-
-static bool hasCloseEyeBone(const ModelData* modelData)
-{
-    return modelData && std::find(modelData->bones.begin(), modelData->bones.end(), "bone_biyan") != modelData->bones.end();
-}
 
 Sprite3D* Sprite3D::create()
 {
@@ -378,9 +371,6 @@ Sprite3D* Sprite3D::createSprite3DNode(NodeData* nodedata,ModelData* modeldata,c
             auto skin = MeshSkin::create(_skeleton, modeldata->bones, modeldata->invBindPose);
             mesh->setSkin(skin);
         }
-        if (hasCloseEyeBone(modeldata))
-            mesh->lockVisibilityHidden();
-        
         if (modeldata->materialId == "" && materialdatas.materials.size())
         {
             const NTextureData* textureData = materialdatas.materials[0].getTextureData(NTextureData::Usage::Diffuse);
@@ -544,8 +534,6 @@ void Sprite3D::createNode(NodeData* nodedata, Node* root, const MaterialDatas& m
                         auto skin = MeshSkin::create(_skeleton, it->bones, it->invBindPose);
                         mesh->setSkin(skin);
                     }
-                    if (hasCloseEyeBone(it))
-                        mesh->lockVisibilityHidden();
                     mesh->_visibleChanged = std::bind(&Sprite3D::onAABBDirty, this);
 
                     if (it->materialId == "" && materialdatas.materials.size())

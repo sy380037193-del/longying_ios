@@ -55,15 +55,15 @@ Do not commit local Android build caches, APKs, IPAs, `build_ios`, full
 `resources`, generated `outres`, or generated ZIP packages into this skeleton
 repository.
 
-## iOS Closed-Eye Mesh Default
+## iOS Sprite3D Minification
 
-The head models contain a separate skinned mesh for the closed-eye animation.
-That mesh is bound to the `bone_biyan` bone and must start hidden; Lua may show
-it briefly while playing the blink animation.
+The outfit preview renders 512x512 character atlases on very small 3D meshes.
+The Metal backend now generates mipmaps for Sprite3D diffuse textures and uses
+trilinear minification. This prevents high-contrast face and leg details from
+collapsing into coarse dark blocks when the role is shown at preview scale.
 
-The iOS skeleton now hides every mesh bound to `bone_biyan` when Sprite3D data
-is created, including the cache-loading path, and locks those meshes hidden.
-This prevents Lua's blink callbacks from showing the closed-eye overlay over
-the normal face. The iOS trade-off is that this overlay-based blink animation
-is disabled; rebuilding the IPA is required because replacing only `outres`
-cannot update this native behavior.
+The Metal sampler maps every mipmap filter enum to the matching
+`MTLSamplerMipFilter`; the original backend left this field at the default and
+therefore could not sample generated mip levels. The change is native to the
+iOS IPA, keeps the original C3B and texture files unchanged, and does not lock
+or hide the `bone_biyan` blink mesh.
