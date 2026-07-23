@@ -379,7 +379,7 @@ Sprite3D* Sprite3D::createSprite3DNode(NodeData* nodedata,ModelData* modeldata,c
             mesh->setSkin(skin);
         }
         if (hasCloseEyeBone(modeldata))
-            mesh->setVisible(false);
+            mesh->lockVisibilityHidden();
         
         if (modeldata->materialId == "" && materialdatas.materials.size())
         {
@@ -545,7 +545,7 @@ void Sprite3D::createNode(NodeData* nodedata, Node* root, const MaterialDatas& m
                         mesh->setSkin(skin);
                     }
                     if (hasCloseEyeBone(it))
-                        mesh->setVisible(false);
+                        mesh->lockVisibilityHidden();
                     mesh->_visibleChanged = std::bind(&Sprite3D::onAABBDirty, this);
 
                     if (it->materialId == "" && materialdatas.materials.size())

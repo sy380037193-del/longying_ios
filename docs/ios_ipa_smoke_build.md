@@ -62,7 +62,8 @@ That mesh is bound to the `bone_biyan` bone and must start hidden; Lua may show
 it briefly while playing the blink animation.
 
 The iOS skeleton now hides every mesh bound to `bone_biyan` when Sprite3D data
-is created, including the cache-loading path. This native default prevents the
-closed-eye overlay from covering the normal face when Lua does not resolve the
-mesh, while preserving later `Mesh:setVisible` blink control. Rebuilding the
-IPA is required; replacing only `outres` cannot update this behavior.
+is created, including the cache-loading path, and locks those meshes hidden.
+This prevents Lua's blink callbacks from showing the closed-eye overlay over
+the normal face. The iOS trade-off is that this overlay-based blink animation
+is disabled; rebuilding the IPA is required because replacing only `outres`
+cannot update this native behavior.

@@ -114,6 +114,7 @@ static Texture2D * getDummyTexture()
 Mesh::Mesh()
 : _skin(nullptr)
 , _visible(true)
+, _visibilityLocked(false)
 , _isTransparent(false)
 , _force2DQueue(false)
 , _meshIndexData(nullptr)
@@ -240,6 +241,9 @@ Mesh* Mesh::create(const std::string& name, MeshIndexData* indexData, MeshSkin* 
 
 void Mesh::setVisible(bool visible)
 {
+    if (_visibilityLocked && visible)
+        return;
+
     if (_visible != visible)
     {
         _visible = visible;

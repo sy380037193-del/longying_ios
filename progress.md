@@ -110,3 +110,20 @@
 - `docs/ios_ipa_smoke_build.md`: replaces the obsolete NEON explanation with the closed-eye mesh behavior and rebuild requirement.
 - `progress.md`: appends the evidence, verification boundary, changed-file list, and rollback point for this task.
 - Rollback: revert this task commit, then push `main` to rebuild the prior IPA skeleton.
+
+## 2026-07-23 - Task: Lock iOS closed-eye meshes hidden
+### What was done
+- Confirmed the previous create-time hide was later reversed by `Role3DAni.lua`, which calls `Mesh:setVisible(true)` during head setup and every blink cycle.
+- Added a native hidden-visibility lock and applied it only to meshes bound to `bone_biyan` in both Sprite3D model creation paths.
+- Kept normal face, dress, body, and texture handling unchanged; the iOS closed-eye overlay animation is intentionally disabled.
+### Testing
+- Verified the lock is disabled by default for every mesh and enabled only after `hasCloseEyeBone` identifies a `bone_biyan` model mesh.
+- Verified `Mesh::setVisible(true)` returns without changing visibility for locked meshes, covering the Lua blink callback that defeated the previous fix.
+- Ran `git diff --check` successfully. GitHub Actions Release compilation and final device installation remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.h`: adds per-mesh hidden-lock state and the native lock operation.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: initializes the lock off and rejects attempts to show a locked mesh.
+- `frameworks/cocos2d-x/cocos/3d/CCSprite3D.cpp`: locks `bone_biyan` meshes hidden in normal and attached model creation paths.
+- `docs/ios_ipa_smoke_build.md`: records the permanent-hide behavior, disabled blink overlay, and IPA rebuild boundary.
+- `progress.md`: appends the diagnosis, implementation, verification, changed-file list, and rollback point for this task.
+- Rollback: revert this task commit, then push `main` to rebuild the previous create-time-hide IPA.
