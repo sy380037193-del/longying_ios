@@ -232,3 +232,24 @@
 - `docs/ios_ipa_smoke_build.md`: documents the immediate handshake and path-independent mesh trigger.
 - `progress.md`: appends the failed-trigger evidence, replacement behavior, verification boundary, and rollback command.
 - Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the V1 path-filtered diagnostic package.
+
+## 2026-07-23 - Task: Fix iOS Metal Sprite3D atlas sampling and final texture binding
+### What was done
+- Used V2 phone logs to verify the head meshes loaded valid UVs, skins, textures, and independent ProgramStates while reproducing the abnormal face.
+- Limited the iOS Metal built-in textured Sprite3D programs to raw C3B V coordinates; Android, OpenGL, 2D UI, particles, and non-textured 3D programs retain their existing behavior.
+- Rebound each iOS Mesh diffuse texture to fragment slot 0 immediately before submission and advanced the device marker to diagnostics V3.
+### Testing
+- Received the V2 launch handshake and 51 first-draw records directly from the phone at `192.168.1.53` through the computer receiver on UDP port `39091`.
+- Verified all logged head textures (`batch_head_d_1`, `batch_head_d_2`, and `batch_hat_d_1`) matched their fragment slot-0 backend textures and had valid per-submesh UV bounds.
+- Detected two concrete dress mismatches before the fix: `batch_toushi_d_1` drew with `batch_body_d_5`, and `batch_body_t_4` drew with `batch_body_d_7`.
+- Compared the current shader sample with the raw-V atlas sample for the affected face; the current flipped V selected a different face region while raw V selected the expected face region.
+- GitHub Actions compilation and V3 real-device visual/log verification remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/renderer/backend/ProgramCache.cpp`: enables the raw-V shader branch only for iOS Metal textured Sprite3D programs.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionTexture.vert`: preserves raw V for iOS Metal unlit textured 3D meshes.
+- `frameworks/cocos2d-x/cocos/renderer/shaders/3D_positionNormalTexture.vert`: preserves raw V for iOS Metal lit and normal-mapped textured 3D meshes.
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: restores each iOS Mesh diffuse texture at the final pre-submit boundary.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp`: identifies the verification package as diagnostics V3.
+- `docs/ios_ipa_smoke_build.md`: documents the iOS-only atlas and final-binding behavior.
+- `progress.md`: appends the phone evidence, implementation, verification boundary, changed-file list, and rollback command.
+- Rollback: run `git revert <this-task-commit-sha>` and `git push origin main` to restore the V2 evidence-only package.

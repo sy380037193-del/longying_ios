@@ -408,11 +408,18 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
 
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
     Texture2D* diagnosticTexture = nullptr;
+    Texture2D* iosDiffuseTexture = nullptr;
     const auto diffuseTexture = _textures.find(NTextureData::Usage::Diffuse);
     if (diffuseTexture != _textures.end())
-        diagnosticTexture = diffuseTexture->second;
+        diagnosticTexture = iosDiffuseTexture = diffuseTexture->second;
     else if (!_textures.empty())
         diagnosticTexture = _textures.begin()->second;
+
+    if (iosDiffuseTexture)
+    {
+        for (const auto* pass : _material->_currentTechnique->_passes)
+            pass->setUniformTexture(0, iosDiffuseTexture->getBackendTexture());
+    }
 
     if (_skin && diagnosticTexture && ios_head_render_diagnostics::markFirstDraw(this))
     {

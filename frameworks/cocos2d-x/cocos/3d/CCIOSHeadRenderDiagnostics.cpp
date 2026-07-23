@@ -68,7 +68,7 @@ void log(const std::string& line)
     std::lock_guard<std::mutex> lock(mutex);
     if (!markerWritten)
     {
-        emit("marker=LONGYING_IOS_HEAD_DIAGNOSTICS_V2 receiver=192.168.1.78:39091");
+        emit("marker=LONGYING_IOS_HEAD_DIAGNOSTICS_V3 receiver=192.168.1.78:39091");
         markerWritten = true;
     }
     emit(line);
