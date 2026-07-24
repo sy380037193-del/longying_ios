@@ -411,3 +411,15 @@
 - `docs/ios_ipa_smoke_build.md`: records the rejected double-sided test, the constrained replacement path, and real-device acceptance criteria.
 - `progress.md`: records implementation, validation evidence, changed files, and rollback.
 - Rollback: run `git revert --no-edit <this-task-commit>` and push `main` to rebuild commit `1d32018`; do not redeploy the rejected double-sided payload.
+
+## 2026-07-24 - Task: Record the rigid single-bone iOS build verification
+### What was done
+- Confirmed GitHub Actions built and uploaded the rigid single-bone diagnostic IPA from commit `8db35df83e6e6fc0f6799ab5b558a2e366a01cc2`.
+- Kept real-device appearance and UDP evidence as the remaining acceptance boundary.
+### Testing
+- GitHub Actions run `30078066123` completed with conclusion `success`; its `build` job also completed successfully.
+- The successful sequential job confirms Xcode compiled the changed engine source, the IPA validation found the required `rigid_single_bone=` executable marker, and the artifact upload step completed.
+- Real-device acceptance still requires a face first-draw line containing `palette_rows=3 rigid_single_bone=1 cull_enabled=1` and visual confirmation that the face is complete and dynamic.
+### Notes
+- `progress.md`: records the successful Action and the remaining phone-only acceptance check.
+- Rollback: revert commit `8db35df` and push `main` to rebuild the preceding `1d32018` source; this documentation-only record can be reverted independently.
