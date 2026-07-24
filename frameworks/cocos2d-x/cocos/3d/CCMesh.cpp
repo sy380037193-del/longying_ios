@@ -406,6 +406,46 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
 
     _material->getStateBlock().setBlend(_force2DQueue || isTransparent);
 
+    const Mat4* drawTransform = &transform;
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
+    Vec4* iosMatrixPalette = nullptr;
+    ssize_t iosMatrixPaletteRows = 0;
+    bool useIosRigidSingleBone = false;
+    Mat4 iosRigidSingleBoneTransform;
+    const Vec4 iosIdentityPalette[3] = {
+        Vec4(1.0f, 0.0f, 0.0f, 0.0f),
+        Vec4(0.0f, 1.0f, 0.0f, 0.0f),
+        Vec4(0.0f, 0.0f, 1.0f, 0.0f)
+    };
+
+    if (_skin)
+    {
+        iosMatrixPalette = _skin->getMatrixPalette();
+        iosMatrixPaletteRows = _skin->getMatrixPaletteSize();
+        if (iosMatrixPalette && iosMatrixPaletteRows == 3)
+        {
+            Mat4 boneTransform;
+            boneTransform.setIdentity();
+            boneTransform.m[0] = iosMatrixPalette[0].x;
+            boneTransform.m[4] = iosMatrixPalette[0].y;
+            boneTransform.m[8] = iosMatrixPalette[0].z;
+            boneTransform.m[12] = iosMatrixPalette[0].w;
+            boneTransform.m[1] = iosMatrixPalette[1].x;
+            boneTransform.m[5] = iosMatrixPalette[1].y;
+            boneTransform.m[9] = iosMatrixPalette[1].z;
+            boneTransform.m[13] = iosMatrixPalette[1].w;
+            boneTransform.m[2] = iosMatrixPalette[2].x;
+            boneTransform.m[6] = iosMatrixPalette[2].y;
+            boneTransform.m[10] = iosMatrixPalette[2].z;
+            boneTransform.m[14] = iosMatrixPalette[2].w;
+
+            Mat4::multiply(transform, boneTransform, &iosRigidSingleBoneTransform);
+            drawTransform = &iosRigidSingleBoneTransform;
+            useIosRigidSingleBone = true;
+        }
+    }
+#endif
+
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
     Texture2D* diagnosticTexture = nullptr;
     Texture2D* iosDiffuseTexture = nullptr;
@@ -428,12 +468,18 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
         Vec2 uvMaximum;
         const bool hasUvBounds = _meshIndexData->getTexCoordBounds(&uvMinimum, &uvMaximum);
         const auto& stateBlock = _material->getStateBlock();
+        const auto& submittedTransform = *drawTransform;
         const float transformDeterminant =
-            transform.m[0] * (transform.m[5] * transform.m[10] - transform.m[9] * transform.m[6]) -
-            transform.m[4] * (transform.m[1] * transform.m[10] - transform.m[9] * transform.m[2]) +
-            transform.m[8] * (transform.m[1] * transform.m[6] - transform.m[5] * transform.m[2]);
+            submittedTransform.m[0] * (submittedTransform.m[5] * submittedTransform.m[10] - submittedTransform.m[9] * submittedTransform.m[6]) -
+            submittedTransform.m[4] * (submittedTransform.m[1] * submittedTransform.m[10] - submittedTransform.m[9] * submittedTransform.m[2]) +
+            submittedTransform.m[8] * (submittedTransform.m[1] * submittedTransform.m[6] - submittedTransform.m[5] * submittedTransform.m[2]);
+#if defined(CC_USE_METAL)
+        Vec4* palette = iosMatrixPalette;
+        const ssize_t paletteRows = iosMatrixPaletteRows;
+#else
         Vec4* palette = _skin->getMatrixPalette();
         const ssize_t paletteRows = _skin->getMatrixPaletteSize();
+#endif
 
         std::ostringstream line;
         line << "event=first_draw"
@@ -445,6 +491,9 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
              << " transparent=" << isTransparent
              << " skin_ptr=" << _skin
              << " palette_rows=" << paletteRows
+#if defined(CC_USE_METAL)
+             << " rigid_single_bone=" << useIosRigidSingleBone
+#endif
              << " cull_enabled=" << stateBlock._cullFaceEnabled
              << " cull_side=" << static_cast<int>(stateBlock._cullFaceSide)
              << " front_face=" << static_cast<int>(stateBlock._frontFace)
@@ -457,7 +506,7 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
         {
             if (i > 0)
                 line << ',';
-            line << transform.m[i];
+            line << submittedTransform.m[i];
         }
         if (paletteRows >= 3)
         {
@@ -518,7 +567,16 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
         pass->setUniformColor(&color, sizeof(color));
 
         if (_skin)
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS && defined(CC_USE_METAL)
+        {
+            if (useIosRigidSingleBone)
+                pass->setUniformMatrixPalette(iosIdentityPalette, sizeof(iosIdentityPalette));
+            else
+                pass->setUniformMatrixPalette(iosMatrixPalette, iosMatrixPaletteRows * sizeof(iosMatrixPalette[0]));
+        }
+#else
             pass->setUniformMatrixPalette(_skin->getMatrixPalette(), _skin->getMatrixPaletteSizeInBytes());
+#endif
 
         if (scene && scene->getLights().size() > 0)
         {
@@ -529,7 +587,7 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
 
     for (auto &command : commands)
     {
-        command.init(globalZ, transform);
+        command.init(globalZ, *drawTransform);
         command.setSkipBatching(isTransparent);
         command.setTransparent(isTransparent);
         command.set3D(!_force2DQueue);
@@ -541,7 +599,7 @@ void Mesh::draw(Renderer* renderer, float globalZOrder, const Mat4& transform, u
                     getPrimitiveType(),
                     getIndexFormat(),
                     getIndexCount(),
-                    transform);
+                    *drawTransform);
 
 }
 

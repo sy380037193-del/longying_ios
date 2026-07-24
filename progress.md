@@ -391,3 +391,23 @@
 - `frameworks/cocos2d-x/cocos/3d/CCAnimation3D.cpp`: derives the app-bundle directory through `_NSGetExecutablePath` instead of a protected FileUtils method.
 - `progress.md`: records the failed Action evidence, correction, validation boundary, and rollback.
 - Rollback: revert the compilation-fix commit after it is created; reverting only this fix restores commit `fb48dfa`, which is known not to compile on iOS.
+
+## 2026-07-24 - Task: Route iOS Metal rigid single-bone faces through the model transform
+### What was done
+- Kept back-face culling enabled after the real-device double-sided test produced long skin-colored triangles through the character.
+- Added an iOS Metal-only path for exactly one-bone skinned meshes that reconstructs the 3x4 palette matrix, combines it with the submitted model transform, and uploads an identity skin palette.
+- Left multi-bone hair and clothing, Android, Lua, C3B files, textures, and `outres` unchanged.
+- Added `rigid_single_bone=1` to the existing first-draw UDP evidence and made IPA validation require that executable marker.
+### Testing
+- Compared the original shader row-dot calculation with the combined `transform * boneMatrix` calculation for 10,000 points using a real phone palette and transform; maximum absolute error was `2.2737367544323206e-13`.
+- Verified the iOS Metal condition is paired, only activates at `iosMatrixPaletteRows == 3`, and the changed Mesh source contains no `setCullFace(false)` call.
+- Verified all preprocessor condition blocks in `CCMesh.cpp` are balanced.
+- Ran `git diff --check` successfully after all source, build-script, and documentation edits.
+- Ran the UDP receiver self-test successfully on `0.0.0.0:39093` without replacing the live receiver on port 39091.
+- GitHub Actions Xcode compilation, packaged executable marker validation, UDP receipt, and real-device visual acceptance remain required.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCMesh.cpp`: submits one-bone iOS Metal meshes through a combined model transform and reports whether that path was used.
+- `ios_ipa_smoke/scripts/ci_build_ipa.sh`: rejects an IPA whose executable does not contain the rigid single-bone diagnostic marker.
+- `docs/ios_ipa_smoke_build.md`: records the rejected double-sided test, the constrained replacement path, and real-device acceptance criteria.
+- `progress.md`: records implementation, validation evidence, changed files, and rollback.
+- Rollback: run `git revert --no-edit <this-task-commit>` and push `main` to rebuild commit `1d32018`; do not redeploy the rejected double-sided payload.

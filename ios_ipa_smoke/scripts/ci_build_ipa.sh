@@ -160,9 +160,10 @@ elif executable_path:
         b"LONGYING_IOS_HEADLOCK_V6",
         b"event=ios_headlock_animation",
         b"headlock_test_payload",
+        b"rigid_single_bone=",
     ]:
         if marker not in executable_data:
-            errors.append(f"missing iOS headlock executable marker: {marker!r}")
+            errors.append(f"missing required iOS executable marker: {marker!r}")
 
 outres = app_bundle / "outres"
 version_path = outres / "version.json"

@@ -140,3 +140,24 @@ The UDP stream starts with
 file/cache source, and success result. A stale user-managed Lua override that
 stops all head actions must still be removed or replaced; an animation payload
 cannot move a Sprite3D action that Lua has explicitly stopped.
+
+## iOS Metal Rigid Single-Bone Submission
+
+The real-device whole-head double-sided experiment was rejected because it
+rendered back-facing triangles as long strips through the character. Back-face
+culling remains enabled and is not changed by this fix.
+
+On iOS Metal only, a skinned Mesh with exactly one bone now reconstructs its
+single 3x4 palette matrix and multiplies that matrix into the submitted model
+transform. The skin shader receives an identity palette for that draw. This is
+mathematically equivalent to the original vertex-shader calculation, but it
+routes the dynamic rigid-bone transform through the stable model/MVP uniform
+path instead of Metal's one-bone palette path. Multi-bone hair and clothing,
+all Android rendering, Lua, C3B files, textures, and `outres` are unchanged.
+
+The first-draw UDP record contains `rigid_single_bone=1` when this path is
+active. Real-device acceptance requires the affected face line to contain that
+field together with `palette_rows=3` and `cull_enabled=1`, followed by visual
+confirmation that the face is complete and moves with the head. The CI package
+validation also requires the `rigid_single_bone=` executable marker so an old
+binary cannot be mistaken for this build.
