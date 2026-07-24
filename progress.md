@@ -376,3 +376,18 @@
 - `docs/ios_ipa_smoke_build.md`: documents the V6 runtime substitution, diagnostics, dependency, and rollback boundary.
 - `progress.md`: records implementation, validation evidence, changed files, and rollback.
 - Rollback: run `git revert --no-edit <this-task-commit>` and push `main` to rebuild the preceding V5 IPA; separately restore or remove any user-managed `Documents/URes` Lua/C3B overrides because this package does not modify them.
+
+
+## 2026-07-24 - Task: Fix V6 iOS app-bundle path compilation
+### What was done
+- Replaced the inaccessible protected FileUtils directory resolver with the iOS executable-directory API.
+- Kept the same absolute app-bundle payload lookup, iOS-only dress-stand substitution, and URes boundary.
+### Testing
+- GitHub Actions run `30064664024` reached `CCAnimation3D.cpp` and failed only because `fullPathForDirectory` is protected.
+- Confirmed Xcode reported one compile failure at the protected call and no other V6 compile errors before stopping.
+- Ran `git diff --check` successfully after replacing the protected call.
+- GitHub Actions recompilation and IPA validation remain required after this fix is pushed.
+### Notes
+- `frameworks/cocos2d-x/cocos/3d/CCAnimation3D.cpp`: derives the app-bundle directory through `_NSGetExecutablePath` instead of a protected FileUtils method.
+- `progress.md`: records the failed Action evidence, correction, validation boundary, and rollback.
+- Rollback: revert the compilation-fix commit after it is created; reverting only this fix restores commit `fb48dfa`, which is known not to compile on iOS.

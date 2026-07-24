@@ -31,6 +31,11 @@
 
 #include <sstream>
 
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+#include <limits.h>
+#include <mach-o/dyld.h>
+#endif
+
 NS_CC_BEGIN
 
 namespace
@@ -44,6 +49,20 @@ const int IOS_HEADLOCK_SHAPE_IDS[] = {
     4007, 4008, 4017, 4018, 4037, 4038,
 };
 
+std::string getIosAppBundleDirectory()
+{
+    char executablePath[PATH_MAX] = {};
+    uint32_t pathSize = sizeof(executablePath);
+    if (_NSGetExecutablePath(executablePath, &pathSize) != 0)
+    {
+        return "";
+    }
+
+    const std::string path(executablePath);
+    const auto separator = path.find_last_of('/');
+    return separator == std::string::npos ? "" : path.substr(0, separator);
+}
+
 bool resolveIosHeadlockAnimation(const std::string& requestedPath, std::string* resolvedPath)
 {
     for (const auto shapeId : IOS_HEADLOCK_SHAPE_IDS)
@@ -56,15 +75,15 @@ bool resolveIosHeadlockAnimation(const std::string& requestedPath, std::string* 
             continue;
         }
 
-        auto fileUtils = FileUtils::getInstance();
-        const std::string payloadDirectory = fileUtils->fullPathForDirectory("headlock_test_payload");
-        if (payloadDirectory.empty())
+        const std::string appBundleDirectory = getIosAppBundleDirectory();
+        if (appBundleDirectory.empty())
         {
             return false;
         }
 
+        const std::string payloadDirectory = appBundleDirectory + "/headlock_test_payload";
         const std::string payloadPath = payloadDirectory + "/codex_headlock_" + id + ".c3b";
-        if (!fileUtils->isFileExist(payloadPath))
+        if (!FileUtils::getInstance()->isFileExist(payloadPath))
         {
             return false;
         }
