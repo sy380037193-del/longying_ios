@@ -19,3 +19,4 @@ CMakeLists.txt text eol=lf
 *.ico binary
 *.icns binary
 *.jar binary
+*.c3b binary

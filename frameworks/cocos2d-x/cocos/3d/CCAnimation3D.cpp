@@ -25,20 +25,102 @@
 
 #include "3d/CCAnimation3D.h"
 #include "3d/CCBundle3D.h"
+#include "3d/CCIOSHeadRenderDiagnostics.h"
 #include "platform/CCFileUtils.h"
+#include "platform/CCPlatformConfig.h"
+
+#include <sstream>
 
 NS_CC_BEGIN
 
+namespace
+{
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+const int IOS_HEADLOCK_SHAPE_IDS[] = {
+    1001, 1002, 1011, 1012, 1031, 1032,
+    1101, 1102, 1111, 1112, 1131, 1132,
+    2003, 2004, 2013, 2014, 2033, 2034,
+    3005, 3006, 3015, 3016, 3035, 3036,
+    4007, 4008, 4017, 4018, 4037, 4038,
+};
+
+bool resolveIosHeadlockAnimation(const std::string& requestedPath, std::string* resolvedPath)
+{
+    for (const auto shapeId : IOS_HEADLOCK_SHAPE_IDS)
+    {
+        const std::string id = std::to_string(shapeId);
+        const std::string expectedSuffix = "/" + id + "/" + id + "_dress-stand.c3b";
+        if (requestedPath.size() < expectedSuffix.size() ||
+            requestedPath.compare(requestedPath.size() - expectedSuffix.size(), expectedSuffix.size(), expectedSuffix) != 0)
+        {
+            continue;
+        }
+
+        auto fileUtils = FileUtils::getInstance();
+        const std::string payloadDirectory = fileUtils->fullPathForDirectory("headlock_test_payload");
+        if (payloadDirectory.empty())
+        {
+            return false;
+        }
+
+        const std::string payloadPath = payloadDirectory + "/codex_headlock_" + id + ".c3b";
+        if (!fileUtils->isFileExist(payloadPath))
+        {
+            return false;
+        }
+
+        *resolvedPath = payloadPath;
+        return true;
+    }
+
+    return false;
+}
+
+void logIosHeadlockAnimation(const std::string& requestedPath,
+                             const std::string& resolvedPath,
+                             const std::string& animationName,
+                             const char* source,
+                             bool success)
+{
+    std::ostringstream output;
+    output << "event=ios_headlock_animation"
+           << " requested=" << requestedPath
+           << " resolved=" << resolvedPath
+           << " animation=" << animationName
+           << " source=" << source
+           << " success=" << (success ? 1 : 0);
+    ios_head_render_diagnostics::log(output.str());
+}
+#endif
+}
+
 Animation3D* Animation3D::create(const std::string& fileName, const std::string& animationName)
 {
-    std::string fullPath = FileUtils::getInstance()->fullPathForFilename(fileName);
+    std::string resolvedFileName = fileName;
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    bool usesHeadlockAnimation = resolveIosHeadlockAnimation(fileName, &resolvedFileName);
+    if (!usesHeadlockAnimation && fileName.find("codex_headlock_") != std::string::npos)
+    {
+        usesHeadlockAnimation = true;
+    }
+#endif
+
+    std::string fullPath = FileUtils::getInstance()->fullPathForFilename(resolvedFileName);
     std::string key = fullPath + "#" + animationName;
     auto animation = Animation3DCache::getInstance()->getAnimation(key);
     if (animation != nullptr)
+    {
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+        if (usesHeadlockAnimation)
+        {
+            logIosHeadlockAnimation(fileName, fullPath, animationName, "cache", true);
+        }
+#endif
         return animation;
+    }
     
     animation = new (std::nothrow) Animation3D();
-    if(animation->initWithFile(fileName, animationName))
+    if(animation->initWithFile(resolvedFileName, animationName))
     {
         animation->autorelease();
     }
@@ -46,6 +128,13 @@ Animation3D* Animation3D::create(const std::string& fileName, const std::string&
     {
         CC_SAFE_DELETE(animation);
     }
+
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    if (usesHeadlockAnimation)
+    {
+        logIosHeadlockAnimation(fileName, fullPath, animationName, "file", animation != nullptr);
+    }
+#endif
     
     return animation;
 }

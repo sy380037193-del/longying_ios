@@ -9,6 +9,7 @@ Longying resource tree.
 - `smoke_src/main.lua`: tiny Lua entry script, encrypted as logical `src/main.lua`.
 - `smoke_res/smoke.json`: tiny encrypted resource read by the smoke script.
 - `outres_smoke/`: generated minimal encrypted resources committed with the skeleton.
+- `headlock_test_payload/`: 30 iOS-only corrected dress-stand C3B animations.
 - `scripts/generate_smoke_outres.py`: generates `outres_smoke` with Longying encryption.
 - `scripts/generate_smoke_outres.ps1`: Windows wrapper for the generator.
 - `scripts/ci_build_ipa.sh`: GitHub Actions macOS build script.
@@ -23,4 +24,7 @@ powershell -ExecutionPolicy Bypass -File ios_ipa_smoke\scripts\generate_smoke_ou
 ```
 
 The full production resource package can replace this minimal outres later, but
-the skeleton intentionally keeps only the smoke package in Git.
+the skeleton intentionally keeps only the smoke package in Git. The headlock
+payload is copied beside `outres` in the app bundle, so replacing the minimal
+outres does not remove the iOS fix. The app does not copy this payload into
+`Documents/URes`.

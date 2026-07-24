@@ -19,9 +19,10 @@ The macOS runner performs these steps:
    and does not bundle plain `src` or `res`.
 5. Generate the Xcode project with CMake.
 6. Build `dhxy.app` with `xcodebuild`.
-7. Validate the app bundle and minimal `outres`.
-8. Package `Payload/dhxy.app` into an unsigned IPA.
-9. Upload the IPA and dSYM as GitHub Actions artifacts.
+7. Add and validate the 30-file iOS headlock payload beside `outres`.
+8. Validate the app bundle and minimal `outres`.
+9. Package `Payload/dhxy.app` into an unsigned IPA.
+10. Upload the IPA and dSYM as GitHub Actions artifacts.
 
 ## Minimal Outres
 
@@ -57,10 +58,11 @@ repository.
 
 ## Temporary iOS Head Render Diagnostics
 
-The iOS package currently contains a temporary diagnostic channel for the
-outfit face-rendering investigation. It does not change Lua, C3B files,
-textures, `outres`, `version.json`, or the Android rendering path. The failed
-iOS CPU-skinning experiment has been removed.
+The iOS package contains a temporary diagnostic channel for the outfit
+face-rendering investigation. The channel does not change Lua, textures,
+`outres`, `version.json`, or the Android rendering path. V6 additionally
+bundles the iOS-only corrected C3B animations documented below. The failed iOS
+CPU-skinning experiment has been removed.
 
 Before launching the diagnostic IPA, start the receiver from the repository
 root on the development computer:
@@ -116,3 +118,25 @@ matrix and determinant, the first skin-palette matrix and determinant, and the
 material cull, winding, and depth state. These fields distinguish a mirrored or
 reversed head transform from a skin-palette or fixed-function state problem
 without cycling visual rendering experiments.
+
+## V6 iOS Head-Bone Animation Fix
+
+The V6 package contains corrected dress-stand animations for all 30 supported
+shape IDs under `headlock_test_payload` in the app bundle. On iOS only,
+`Animation3D::create` replaces a matching
+`3d/c3b/shape/<shape>/<shape>_dress-stand.c3b` request with the bundled
+`codex_headlock_<shape>.c3b`. Other actions and Android keep their original
+paths.
+
+The corrected animations retain neck and body movement while preventing the
+`Bip01 Head` keys from driving the detached head model into the mismatched face
+pose. They are bundled outside `outres`, so inserting the full production
+`outres` does not remove them. The package does not write or copy files into
+`Documents/URes`.
+
+The UDP stream starts with
+`marker=LONGYING_IOS_HEADLOCK_V6`. When the fix is selected it also emits
+`event=ios_headlock_animation` with the requested path, resolved path,
+file/cache source, and success result. A stale user-managed Lua override that
+stops all head actions must still be removed or replaced; an animation payload
+cannot move a Sprite3D action that Lua has explicitly stopped.

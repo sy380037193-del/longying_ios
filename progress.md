@@ -316,3 +316,63 @@
 ### Notes
 - `progress.md`: appends the successful V5 GitHub Actions build and remaining real-device verification boundary.
 - Rollback: run `git revert --no-edit HEAD` and `git push origin main` after this documentation-only commit is created.
+
+
+## 2026-07-24 - Task: Package the iOS head-bone animation fix
+### What was done
+- Added 30 iOS-only corrected dress-stand animation payloads for every supported character shape.
+- Changed iOS Animation3D loading so the matching shape dress-stand animation resolves to the bundled corrected payload while Android and every other action keep their existing path.
+- Preserved direct loading of user-managed `Documents/URes/codex_headlock_*.c3b` files and added UDP evidence for the requested path, resolved path, cache/file source, and load result.
+- Advanced the launch marker to `LONGYING_IOS_HEADLOCK_V6` and made the Action package and validate the exact 30-file C3B payload.
+- Did not write, copy, delete, or migrate any file under the phone's `Documents/URes`.
+### Testing
+- Verified the payload contains exactly 30 unique shape files totaling 5,931,052 bytes; all start with the `C3B\0` header.
+- Verified all 30 repository payload SHA-256 hashes match the prepared `phone_headlock_test_20260724_1017` artifacts with zero mismatches.
+- Compared every payload with its source `*_dress-stand.c3b`: all 30 retain the exact source byte length and differ by 292 to 398 bytes.
+- Ran `git diff --check` successfully.
+- Ran `bash -n ios_ipa_smoke/scripts/ci_build_ipa.sh` successfully.
+- Verified the native resolver uses `fullPathForDirectory` plus an absolute C3B path, bypassing the client's automatic logical-path hashing.
+- Added Action validation for the V6 marker, headlock load event, and payload-directory strings in the packaged executable.
+- Verified all 30 logical dress-stand requests map to existing payloads and a non-dress action does not match.
+- Compiled the embedded Action Python validation block successfully.
+- Ran `python tools_new/receive_ios_head_log.py --self-test --port 39092` successfully.
+- GitHub Actions iOS compilation, IPA payload validation, UDP receipt, and real-device visual verification remain required.
+### Notes
+- `.gitattributes`: treats committed C3B payloads as binary files.
+- `frameworks/cocos2d-x/cocos/3d/CCAnimation3D.cpp`: applies the iOS-only dress-stand substitution and reports actual load results.
+- `frameworks/cocos2d-x/cocos/3d/CCIOSHeadRenderDiagnostics.cpp`: advances the package marker to V6.
+- `ios_ipa_smoke/scripts/ci_build_ipa.sh`: copies and validates the exact headlock payload in the app bundle.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1001.c3b`: adds the corrected shape 1001 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1002.c3b`: adds the corrected shape 1002 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1011.c3b`: adds the corrected shape 1011 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1012.c3b`: adds the corrected shape 1012 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1031.c3b`: adds the corrected shape 1031 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1032.c3b`: adds the corrected shape 1032 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1101.c3b`: adds the corrected shape 1101 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1102.c3b`: adds the corrected shape 1102 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1111.c3b`: adds the corrected shape 1111 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1112.c3b`: adds the corrected shape 1112 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1131.c3b`: adds the corrected shape 1131 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_1132.c3b`: adds the corrected shape 1132 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_2003.c3b`: adds the corrected shape 2003 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_2004.c3b`: adds the corrected shape 2004 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_2013.c3b`: adds the corrected shape 2013 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_2014.c3b`: adds the corrected shape 2014 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_2033.c3b`: adds the corrected shape 2033 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_2034.c3b`: adds the corrected shape 2034 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_3005.c3b`: adds the corrected shape 3005 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_3006.c3b`: adds the corrected shape 3006 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_3015.c3b`: adds the corrected shape 3015 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_3016.c3b`: adds the corrected shape 3016 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_3035.c3b`: adds the corrected shape 3035 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_3036.c3b`: adds the corrected shape 3036 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_4007.c3b`: adds the corrected shape 4007 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_4008.c3b`: adds the corrected shape 4008 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_4017.c3b`: adds the corrected shape 4017 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_4018.c3b`: adds the corrected shape 4018 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_4037.c3b`: adds the corrected shape 4037 dress-stand animation.
+- `ios_ipa_smoke/headlock_test_payload/codex_headlock_4038.c3b`: adds the corrected shape 4038 dress-stand animation.
+- `ios_ipa_smoke/README.md`: documents the bundled iOS-only payload and its non-URes behavior.
+- `docs/ios_ipa_smoke_build.md`: documents the V6 runtime substitution, diagnostics, dependency, and rollback boundary.
+- `progress.md`: records implementation, validation evidence, changed files, and rollback.
+- Rollback: run `git revert --no-edit <this-task-commit>` and push `main` to rebuild the preceding V5 IPA; separately restore or remove any user-managed `Documents/URes` Lua/C3B overrides because this package does not modify them.

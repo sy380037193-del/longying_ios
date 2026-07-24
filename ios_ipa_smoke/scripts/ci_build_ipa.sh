@@ -93,6 +93,15 @@ mkdir -p "$PAYLOAD_DIR"
 cp -R "$APP_PATH" "$PAYLOAD_DIR/"
 
 APP_BUNDLE="$PAYLOAD_DIR/${APP_NAME}.app"
+HEADLOCK_PAYLOAD_SOURCE="$SMOKE_DIR/headlock_test_payload"
+
+if [[ ! -d "$HEADLOCK_PAYLOAD_SOURCE" ]]; then
+  echo "Missing iOS headlock payload: $HEADLOCK_PAYLOAD_SOURCE" >&2
+  exit 1
+fi
+
+rm -rf "$APP_BUNDLE/headlock_test_payload"
+cp -R "$HEADLOCK_PAYLOAD_SOURCE" "$APP_BUNDLE/headlock_test_payload"
 
 python3 - "$APP_BUNDLE" "$IOS_BUNDLE_ID" <<'PY'
 import json
@@ -142,8 +151,18 @@ if info.get("CFBundlePackageType") != "APPL":
     errors.append(f"CFBundlePackageType is {info.get('CFBundlePackageType')!r}, expected 'APPL'")
 
 executable = info.get("CFBundleExecutable")
-if executable and not (app_bundle / executable).is_file():
+executable_path = app_bundle / executable if executable else None
+if executable_path and not executable_path.is_file():
     errors.append(f"missing CFBundleExecutable file: {executable}")
+elif executable_path:
+    executable_data = executable_path.read_bytes()
+    for marker in [
+        b"LONGYING_IOS_HEADLOCK_V6",
+        b"event=ios_headlock_animation",
+        b"headlock_test_payload",
+    ]:
+        if marker not in executable_data:
+            errors.append(f"missing iOS headlock executable marker: {marker!r}")
 
 outres = app_bundle / "outres"
 version_path = outres / "version.json"
@@ -171,6 +190,31 @@ if (app_bundle / "src").exists():
     errors.append("plain src directory should not be bundled in smoke IPA")
 if (app_bundle / "res").exists():
     errors.append("plain res directory should not be bundled in smoke IPA")
+
+headlock_shape_ids = [
+    1001, 1002, 1011, 1012, 1031, 1032,
+    1101, 1102, 1111, 1112, 1131, 1132,
+    2003, 2004, 2013, 2014, 2033, 2034,
+    3005, 3006, 3015, 3016, 3035, 3036,
+    4007, 4008, 4017, 4018, 4037, 4038,
+]
+headlock_dir = app_bundle / "headlock_test_payload"
+expected_headlock_files = {
+    f"codex_headlock_{shape_id}.c3b" for shape_id in headlock_shape_ids
+}
+actual_headlock_files = {
+    path.name for path in headlock_dir.iterdir() if path.is_file()
+} if headlock_dir.is_dir() else set()
+if actual_headlock_files != expected_headlock_files:
+    errors.append(
+        "iOS headlock payload mismatch: "
+        f"missing={sorted(expected_headlock_files - actual_headlock_files)}, "
+        f"extra={sorted(actual_headlock_files - expected_headlock_files)}"
+    )
+for filename in sorted(expected_headlock_files & actual_headlock_files):
+    data = (headlock_dir / filename).read_bytes()
+    if not data.startswith(b"C3B\0"):
+        errors.append(f"invalid iOS headlock C3B: {filename}")
 
 if not (app_bundle / "_CodeSignature").exists():
     print("warning: app bundle is unsigned; this is expected for the smoke build")
